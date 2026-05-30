@@ -5,7 +5,7 @@ argument-hint: "[path-or-name] [--quick|--deep|--persona human|vibe|model|all|--
 level: 3
 ---
 
-# Skill-Hedge — Intelligent Quality Counterparty v2.1
+# Skill-Hedge — Intelligent Quality Counterparty v2.2
 
 ## Overview
 
@@ -233,6 +233,81 @@ For skills orchestrating end-to-end flows or multi-layer changes:
 
 ---
 
+## Phase 6: Security Attack Detection (Sec)
+
+> **Target**: Not just skills — also vibe-coded projects, prototypes, MVPs, and AI-generated code.
+>
+> **Philosophy**: Vibe coders ship fast. Security is invisible until it breaks. We find what they can't see.
+
+For skills that generate or modify code, AND for any codebase scanned via `--security`:
+
+### Category Sec: Injection & Security Hedge
+
+| ID | Check | Failure Mode | Sev | Why Vibe Coders Hit This |
+|----|-------|-------------|-----|-------------------------|
+| Sec1 | SQL Injection | String concatenation/template literals in SQL queries | 🔴 RCE/Data breach | AI generates `db.query(\`SELECT * FROM users WHERE id = ${req.params.id}\`)` — vibe coder pastes and ships |
+| Sec2 | Command Injection | `exec()`, `os.system()`, `child_process.exec()` with user input | 🔴 RCE | AI suggests `os.system("ping " + user_input)` for "network diagnostic feature" |
+| Sec3 | XSS / Reflected Input | `innerHTML`, `dangerouslySetInnerHTML`, unescaped template output | 🔴 Session hijacking | AI uses `innerHTML` for dynamic content. Vibe coder copies without sanitization |
+| Sec4 | Path Traversal (CWE-22) | File access with user-controlled path | 🔴 Arbitrary file read/write | AI generates `fs.readFileSync(req.query.file)` for "serve file by name" |
+| Sec5 | Insecure Deserialization | `pickle.loads()`, `eval()`, `yaml.load()` on untrusted data | 🔴 RCE | AI suggests `pickle` or `eval` for "quick parsing" — vibe coder puts it in request handler |
+| Sec6 | Hardcoded Secrets | API keys, passwords, DB connection strings in source | 🟠 Credential leak | AI examples include `API_KEY = "sk-xxx"`. Vibe coder replaces with real key and commits |
+| Sec7 | SSRF / Open Redirect | `fetch()`/`requests.get()` with user-controlled URL | 🟠 Internal probe / phishing | AI generates `fetch(req.query.url)` for "URL preview". No validation |
+| Sec8 | eval/exec Abuse | `eval()`, `new Function()`, `exec()` anywhere in code | 🔴 Arbitrary code execution | AI uses `eval()` for "dynamic property access". Vibe coder never questions it |
+| Sec9 | ReDoS (Regex DoS) | Nested quantifiers in regex patterns | 🟡 Denial of Service | AI generates complex validation regexes. Vibe coder copies without ReDoS testing |
+| Sec10 | Debug Mode in Production | `debug=True`, `NODE_ENV=development`, stack traces to client | 🟠 Info disclosure | AI starter code has `debug=True`. Vibe coder deploys as-is |
+| Sec11 | Overly Permissive CORS | `Access-Control-Allow-Origin: *` on authenticated APIs | 🟠 CSRF bypass | AI suggests `cors()` to "fix CORS errors". Vibe coder applies globally |
+| Sec12 | Missing Input Validation | User input flows directly to DB/files/commands without validation | 🟠 Multi-category risk | AI chains `req.body` straight to DB. No validation layer exists |
+
+### Vibe-Coding Specific Security Anti-Patterns
+
+| ID | Pattern | Why It Happens | Detection |
+|----|---------|---------------|-----------|
+| Vibe1 | NoSQL Injection via `.find(req.body)` | AI can't figure out ORM syntax, suggests "flexible search" | Look for `find()`, `findOne()` with `$` operators from user input |
+| Vibe2 | Trust User Input for File Deletion | AI generates "delete user file" endpoint | Look for `fs.unlink()`, `os.remove()` with req/query params |
+| Vibe3 | Trust User Input for DB IDs | AI generates `findById(req.params.id)` | Look for findById/findByPk with unvalidated string input |
+| Vibe4 | AI Slop — Copy-Paste Test Code to Prod | AI generates tests with mock data, vibe coder deploys | Look for `mock`, `test`, `fixture` data in non-test files |
+| Vibe5 | Stack Trace in API Response | AI returns `err.stack` for "better debugging" | Look for error responses containing `stack`, `trace`, file paths |
+| Vibe6 | `| safe` / Triple Mustache Disable | AI output doesn't render, vibe coder disables escaping | Look for `{{{ }}}`, `\|safe`, `dangerouslySetInnerHTML` |
+
+### Security Scanner Integration
+
+Use the bundled `hedge-sec-scan.py` for automated detection:
+
+```bash
+# Scan a project directory
+python hedge-sec-scan.py ./my-project --format=md
+
+# Only critical + high severity
+python hedge-sec-scan.py ./my-project --severity=high
+
+# JSON output for CI integration
+python hedge-sec-scan.py ./my-project --format=json
+
+# Filter languages
+python hedge-sec-scan.py ./my-project --lang=js,py,ts
+```
+
+**When to run security scan:**
+- After `--deep` hedge, if target skill generates code
+- When user asks to "check security" or "find vulnerabilities"
+- When target is a vibe-coded project (not just a skill)
+- When scoring includes backend or fullstack domain
+
+### Security Scoring Extension
+
+```
+Applicable_Security = All Sec checks relevant to target's domain
+Security_Risk_Points = Σ(Critical×10 + High×5 + Medium×2 + Low×1)
+Security_Max = Applicable_Security × 10
+Security_Score = 100 - (Security_Risk_Points / Security_Max × 100)
+
+Combined_Score = (Hedge_Score × 0.7) + (Security_Score × 0.3)
+```
+
+If `Combined_Score < 60` and `Security_Score < 50`, downgrade overall rating by one level.
+
+---
+
 ## Phase 5: Hedge Report
 
 ### Scoring
@@ -261,8 +336,10 @@ Score = 100 - (Risk Points / Max × 100)
 | Metric | Value |
 |--------|-------|
 | **Hedge Score** | {score}/100 ({rating}) |
+| **Security Score** | {sec_score}/100 ({sec_rating}) |
+| **Combined Score** | {combined}/100 |
 | **Target** | {name} ({type}, {lines}L) |
-| **Scope** | {personas} personas + {domains} domains + {checks} checks |
+| **Scope** | {personas} personas + {domains} domains + security + {checks} checks |
 | **Issues** | {c}🔴 {h}🟠 {m}🟡 {l}🟢 |
 
 ## Structure (A)
@@ -292,6 +369,11 @@ Score = 100 - (Risk Points / Max × 100)
 |----|------|--------|------|-------|
 | ... | ... | ... | ... | ... |
 
+## Security Attack Detection (Sec)
+| ID | Check | Status | Risk | Notes |
+|----|-------|--------|------|-------|
+| ... | ... | ... | ... | ... |
+
 ## Boundary & Consistency
 | ID | Test | Status | Risk | Notes |
 |----|------|--------|------|-------|
@@ -312,9 +394,10 @@ Human:     █████▌░░░░ {n}%
 Vibe:      ████░░░░░░ {n}%
 Model:     █████▎░░░░ {n}%
 {Domain}:  ██████░░░░ {n}%
+Security:  █████░░░░░ {n}%
 ```
 ---
-*Hedge v2.1 | {date}*
+*Hedge v2.2 | {date}*
 ```
 
 ---
@@ -337,6 +420,9 @@ Model:     █████▎░░░░ {n}%
 /skill-hedge my-skill --deep          # Full everything
 /skill-hedge my-skill --persona human # Specific persona
 /skill-hedge my-skill --domain backend # Domain-specific
+/skill-hedge my-skill --security      # Include security attack detection
+/skill-hedge ./my-project --security  # Scan a codebase (not just a skill)
+/skill-hedge my-skill --deep --security # Full hedge + security scan
 /skill-hedge my-skill --dry-run       # Plan only
 ```
 
