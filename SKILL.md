@@ -1,6 +1,6 @@
 ---
 name: skill-hedge
-description: USE WHEN the user wants to test, validate, stress-test, or quality-check a Claude Code skill. Auto-detects target, profiles risk surface, proposes persona-based adversarial plan, awaits user confirmation, then executes. Triggers: "test this skill", "validate skill", "skill quality check", "hedge test", "find bugs in skill", "stress test skill", "对冲测试", "埋雷测试", "skill 质量验证".
+description: USE WHEN the user wants to test, validate, stress-test, or quality-check a Claude Code skill OR scan codebase for security vulnerabilities. Auto-detects target, profiles risk surface, proposes persona-based adversarial plan, awaits user confirmation, then executes. For security scanning, runs hedge-sec-scan.py to detect SQL injection, XSS, path traversal, command injection, hardcoded secrets, SSRF, and other vibe-coding vulnerabilities. Triggers: "test this skill", "validate skill", "skill quality check", "hedge test", "find bugs in skill", "stress test skill", "scan security", "check vulnerabilities", "find injection bugs", "security audit", "对冲测试", "埋雷测试", "skill 质量验证", "安全扫描".
 argument-hint: "[path-or-name] [--quick|--deep|--persona human|vibe|model|all|--domain backend|frontend|fullstack|--dry-run]"
 level: 3
 ---
