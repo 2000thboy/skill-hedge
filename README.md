@@ -72,12 +72,20 @@ Target Skill ◄── Human (impatient, vague) ──►
 
 ## 安装
 
+> ⚠️ **仓库地址确认**：请确保从正确的仓库克隆
+> ```
+> 正确: https://github.com/2000thboy/hedge.git
+> 目录: ~/.claude/skills/hedge
+> ```
+
 ```bash
 # 克隆到 Claude Code Skill 目录
 git clone https://github.com/2000thboy/hedge.git ~/.claude/skills/hedge
 ```
 
 安装完成后，在 Claude Code 中即可通过 `/hedge` 调用。
+
+**Codex 用户**：同时支持 OpenAI Codex，skill 文件已同步至 codex/ 目录。
 
 ---
 
