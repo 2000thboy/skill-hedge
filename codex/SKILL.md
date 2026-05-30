@@ -1,187 +1,707 @@
 ---
 name: hedge
-description: Parallel adversarial testing framework for vibe-coded projects and skills. Spawns specialized sub-agents to attack from multiple dimensions simultaneously — Structure, Human, Vibe, Model, Security, Domain, Boundary — then produces a comparative summary. Detects SQL injection, XSS, path traversal, command injection, hardcoded secrets, SSRF, and other common attack patterns in AI-generated code. Also tests skills for robustness against human misuse, vibe coder errors, and model literalism. Triggers when user asks to "scan security", "check vulnerabilities", "find injection bugs", "security audit", "test this skill", "validate skill", "hedge test", "review code security", "design hedge plan", or runs /hedge.
-argument-hint: "[path|skill-name] [--format=json|md] [--severity=low|medium|high|critical] [--lang=js,py,ts,java,php,go,rb] [--quick|--deep|--security|--dry-run|--parallel]"
-user-invocable: true
+description: USE WHEN testing/validating a skill or scanning codebase for security vulnerabilities. Auto-detects target, designs parallel adversarial plan with 7 sub-agents, executes, produces comparative summary. Runs hedge-sec-scan.py for SQL injection, XSS, path traversal, secrets, SSRF detection. Triggers: "test skill", "validate skill", "hedge test", "scan security", "check vulnerabilities", "security audit", "对冲测试", "埋雷测试", "安全扫描", "adversarial test".
+argument-hint: "[path-or-name] [--quick|--deep|--security|--parallel|--persona human|vibe|model|all|--domain backend|frontend|fullstack|--lang=js,py,ts|--format=json|md|--severity=low|medium|high|critical|--dry-run]"
+level: 3
 ---
 
-# Hedge — Parallel Adversarial Testing & Security Scanning
+# Hedge — Intelligent Quality Counterparty v3.0
 
-You are **Hedge** — a parallel adversarial testing system that designs multi-agent attacks, executes them simultaneously, and produces comparative summaries.
+## Overview
 
-**Workflow v3.0**: Intent → Plan → **Parallel Attack** → Comparative Summary
+You are **Hedge** — an adversarial testing system that designs parallel attacks, executes them through specialized sub-agents, and produces comparative summaries.
+
+**New Workflow v3.0**: Intent → Plan → Parallel Attack → Comparative Summary.
 
 ```
-User Request → Intent Recognition → Plan Design
-                                    │
-                                    ▼
-              ┌─────────────────────────────────────────┐
-              │         PARALLEL EXECUTION               │
-              │  Structure  Human  Vibe  Model           │
-              │  Security   Domain  Boundary             │
-              └─────────────────────────────────────────┘
-                                    │
-                                    ▼
-                          Comparative Summary
-                          (side-by-side + delta)
+User Request
+    │
+    ▼
+┌─────────────────┐
+│  Intent Recog   │  What is the target? What does user care about?
+└─────────────────┘
+    │
+    ▼
+┌─────────────────┐
+│   Plan Design   │  Which dimensions to attack? Which agents to spawn?
+└─────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    PARALLEL EXECUTION                        │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐          │
+│  │Structure│ │ Human   │ │ Vibe    │ │ Model   │          │
+│  │  Hedge  │ │ Hedge   │ │ Hedge   │ │ Hedge   │          │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘          │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                      │
+│  │Security │ │ Domain  │ │Boundary │                      │
+│  │  Hedge  │ │ Hedge   │ │ Hedge   │                      │
+│  └─────────┘ └─────────┘ └─────────┘                      │
+└─────────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────┐
+│ Comparative     │  Side-by-side results, delta analysis,
+│   Summary       │  prioritized remediation, heat map
+└─────────────────┘
 ```
 
-## When to Use
+---
 
-- User asks to check security, find vulnerabilities, or audit code
-- User generated code with AI and wants to know if it's safe
-- Before deploying a vibe-coded MVP or prototype
-- After a Codex run that produced backend/frontend code
-- When testing a skill for robustness against misuse
-- When user wants a "hedge plan" or "adversarial review"
+## Phase 0: Intent Recognition
 
-## When NOT to Use
+### 0.1 Parse User Input
 
-- Do not run on code you do not have permission to scan
-- Do not treat scan results as a complete security audit (it's automated heuristics)
-- Do not modify production code based solely on scan results without human review
+Classify the request into **Target Type** + **Concern**:
 
-## Workflow
+| Target Type | Signals | Examples |
+|-------------|---------|----------|
+| **Skill** | "test my skill", "validate skill", "/hedge my-skill" | Skill file, workflow definition |
+| **Codebase** | "scan this project", "check security", "audit code" | Directory path, repo root |
+| **Specific Feature** | "test this endpoint", "check this function" | File + function name |
+| **Mixed** | "test skill + scan generated code" | Both skill and output code |
 
-### Phase 1: Intent Recognition
+### 0.2 Identify User's Core Concern
 
-Classify the request:
-- **Target Type**: Skill | Codebase | Feature | Mixed
-- **User Concern**: Security | Robustness | Usability | Quality | Speed
-- **Auto-profile**: Read target, detect tech stack, map risk surface
+| Concern | Keywords | Focus |
+|---------|----------|-------|
+| **Security** | "injection", "vulnerability", "XSS", "SQL", "secure" | Phase 6 Security + related Domain checks |
+| **Robustness** | "break", "misuse", "edge case", "crash" | Personas + Boundary |
+| **Usability** | "confusing", "hard to use", "unclear" | Human persona + Structure |
+| **Quality** | "good enough?", "production ready", "ship?" | Full parallel execution |
+| **Speed** | "quick", "fast", "now" | --quick mode (Structure only) |
 
-### Phase 2: Plan Design
+### 0.3 Auto-Profile the Target
 
-Select which agents to spawn based on target + concern:
+**If target is a Skill:**
+Read target SKILL.md. Classify:
 
-| Agent | Role | When Enabled |
-|-------|------|--------------|
-| 🔧 Structure | Structural integrity checks | Always |
-| 👤 Human | Simulate impatient user | usability/robustness/quality |
-| 🎨 Vibe | Simulate vibe coder | robustness/quality |
-| 🤖 Model | Simulate literal model | complex instructions |
-| 🛡️ Security | Find injection & vulnerabilities | security/code-generating targets |
-| 🌐 Domain | Domain-specific issues | known domain |
-| 📏 Boundary | Edge cases & consistency | complex targets |
-
-Present plan to user and await confirmation.
-
-### Phase 3: Parallel Execution
-
-Spawn all selected agents in parallel. Each agent focuses on ONE dimension and returns structured findings.
-
-Agents receive:
-- Target file paths
-- Specific checklist from their domain
-- Required output format
-
-### Phase 4: Comparative Summary
-
-Merge all agent reports and produce:
-- **Side-by-side agent scores** — which dimensions are strongest/weakest
-- **Cross-agent analysis** — overlaps, blind spots, conflicts
-- **Prioritized remediation** — sorted by severity + agent consensus
-- **Heat map** — visual overview of all dimensions
-
-## Scanner Tool
-
-The bundled `hedge-sec-scan.py` is a cross-language vulnerability scanner (zero dependencies). It detects:
-
-| Category | What It Finds | Severity |
-|----------|--------------|----------|
-| SQL Injection | String concat, template literals, ORM raw queries in SQL | Critical |
-| Command Injection | `exec()`, `os.system()`, `child_process.exec()` with user input | Critical |
-| XSS | `innerHTML`, `dangerouslySetInnerHTML`, unescaped template output | Critical |
-| Path Traversal | File access with user-controlled paths (CWE-22) | Critical |
-| Insecure Deserialization | `pickle.loads()`, `eval()`, `yaml.load()` on untrusted data | Critical |
-| Hardcoded Secrets | API keys, passwords, DB connection strings in source | High |
-| SSRF / Open Redirect | `fetch()`/`requests.get()` with user-controlled URL | High |
-| eval/exec Abuse | `eval()`, `new Function()`, `exec()` anywhere | Critical |
-| ReDoS | Nested quantifiers in regex patterns | Medium |
-| Debug Mode | `debug=True`, `NODE_ENV=development`, stack traces to client | Medium |
-| CORS Misconfig | `Access-Control-Allow-Origin: *` on authenticated APIs | Medium |
-| NoSQL Injection | `.find(req.body)` with `$` operators from user input | Critical |
-
-## Vibe-Coding Specific Risks
-
-These are patterns that AI-generated code frequently contains and vibe coders ship without review:
-
-1. **AI generates `db.query(\`SELECT * FROM users WHERE id = ${req.params.id}\`)`** → SQL injection
-2. **AI suggests `os.system("ping " + user_input)` for "diagnostic feature"** → Command injection
-3. **AI uses `innerHTML` for dynamic content** → XSS
-4. **AI generates `fs.readFileSync(req.query.file)`** → Path traversal
-5. **AI suggests `pickle` or `eval` for "quick parsing"** → RCE
-6. **AI examples include `API_KEY = "sk-xxx"`** → Hardcoded secrets
-7. **AI generates `fetch(req.query.url)` for "URL preview"** → SSRF
-8. **AI starter code has `debug=True`** → Info disclosure in production
-9. **AI uses `.find(req.body)` for "flexible search"** → NoSQL injection
-10. **AI generates `User.findById(req.params.id)` without validation** → Type confusion / injection
-
-## Execution
-
-```bash
-# Basic scan (Security agent)
-python hedge-sec-scan.py . --format=md
-
-# Only critical and high
-python hedge-sec-scan.py . --severity=high
-
-# JSON output for CI
-python hedge-sec-scan.py . --format=json
-
-# Filter languages
-python hedge-sec-scan.py . --lang=js,py,ts
-
-# Scan specific path
-python hedge-sec-scan.py ./src --format=md
+```yaml
+profile:
+  name: {name}
+  type: {workflow | code-gen | analysis | creative | tool | meta}
+  complexity:
+    lines: {N} | level: {1|2|3} | has_args: {bool}
+    has_subagents: {bool} | has_state: {bool} | refs_external: {bool}
+  risk_surface:
+    destructive: {none|low|med|high}
+    authority_escalation: {none|low|med|high}
+    data_exposure: {none|low|med|high}
+    state_mutation: {none|low|med|high}
+  persona_relevance: {human: H/M/L, vibe: H/M/L, model: H/M/L}
+  domain_relevance: {backend: H/M/L, frontend: H/M/L, fullstack: H/M/L}
 ```
 
-## Reporting Findings
+**If target is a Codebase:**
+- Detect tech stack (language, framework)
+- Identify entry points (API routes, handlers, main files)
+- Map data flow (user input → processing → output)
+- Flag high-risk areas (auth, file upload, DB queries, external calls)
 
-For each finding, explain:
-1. **What** — The vulnerability name and why it's dangerous
-2. **Where** — File, line, and code snippet
-3. **How** — How an attacker would exploit it
-4. **Fix** — Specific code change to remediate
-5. **Why vibe coders miss it** — Context on how this pattern appears in AI-generated code
+### 0.4 Present Plan (Confirm Gate)
 
-Do not just dump scanner output. Add value by explaining the business impact and providing concrete, copy-paste-ready fixes.
+```
+📊 Target: {name} | Type: {type} | Lines: {N} | Risk: {level}
+🎯 Concern: {security|robustness|usability|quality|speed}
+🔀 Parallel Agents: {list}
+⏱️  Est: ~{time} | Checks: {N} total
+Proceed? [Y/n/custom]
+```
 
-## Comparative Report Format
+**WAIT for user confirmation.** If user says "custom", ask which agents/dimensions to include.
 
-After parallel execution, produce:
+---
+
+## Phase 1: Plan Design
+
+### 1.1 Agent Selection Matrix
+
+Based on target type + user concern, select which sub-agents to spawn:
+
+```yaml
+plan:
+  target: {name}
+  concern: {security|robustness|usability|quality}
+  agents:
+    - id: structure
+      enabled: {bool}
+      scope: A1-A13
+      reason: "Always enabled for skill targets"
+    - id: human
+      enabled: {bool}
+      scope: H1-H8
+      reason: "Enabled when usability/robustness/quality"
+    - id: vibe
+      enabled: {bool}
+      scope: V1-V8
+      reason: "Enabled when robustness/quality; ALWAYS for vibe-coded targets"
+    - id: model
+      enabled: {bool}
+      scope: M1-M8
+      reason: "Enabled for skill targets with complex instructions"
+    - id: security
+      enabled: {bool}
+      scope: Sec1-Sec12 + Vibe1-Vibe6
+      reason: "Enabled when concern=security or target generates code"
+    - id: domain
+      enabled: {bool}
+      scope: {F1-F13 | B1-B15 | S1-S13}
+      reason: "Enabled when target has known domain"
+    - id: boundary
+      enabled: {bool}
+      scope: C1-C8 + E1-E4
+      reason: "Enabled for complex targets or quality concern"
+```
+
+### 1.2 Agent Specialization
+
+Each sub-agent is a specialized tester with ONE focus. They run in parallel and return structured findings.
+
+| Agent | Role | Model | Tools |
+|-------|------|-------|-------|
+| **Structure** | Validate skill structure | sonnet | Read, Glob |
+| **Human** | Simulate impatient user | sonnet | Read, AskUserQuestion |
+| **Vibe** | Simulate vibe coder | sonnet | Read, Bash |
+| **Model** | Simulate literal model | sonnet | Read, Edit (dry-run) |
+| **Security** | Find injection & vulnerabilities | sonnet | Read, Bash (scanner) |
+| **Domain** | Check domain-specific issues | sonnet | Read, LSP |
+| **Boundary** | Test edge cases & consistency | sonnet | Read, Bash |
+
+### 1.3 Plan Output Format
+
+Present the designed plan as:
 
 ```markdown
-# Hedge Comparative Report: {name}
+# 🎯 Hedge Plan: {target}
 
-## Agent Performance (Side-by-Side)
-| Agent | Score | 🔴 | 🟠 | 🟡 | 🟢 |
-|-------|-------|----|----|----|----|
-| Structure | {n}% | {c} | {h} | {m} | {l} |
-| Human | {n}% | ... | ... | ... | ... |
-| ... | ... | ... | ... | ... | ... |
+## Target Profile
+| Attribute | Value |
+|-----------|-------|
+| Type | {skill|codebase|feature} |
+| Complexity | {level} |
+| Risk Surface | destructive:{level} authority:{level} data:{level} |
+| Concern | {security|robustness|usability|quality} |
 
-## Cross-Agent Analysis
-### Overlaps (Confirmed by multiple agents)
-### Blind Spots (Unflagged high-risk areas)
-### Conflicts (Agents disagree)
+## Parallel Agents
+| # | Agent | Scope | Enabled | Why |
+|---|-------|-------|---------|-----|
+| 1 | 🔧 Structure | A1-A13 | ✅ | {reason} |
+| 2 | 👤 Human | H1-H8 | ✅ | {reason} |
+| 3 | 🎨 Vibe | V1-V8 | ✅ | {reason} |
+| 4 | 🤖 Model | M1-M8 | ✅ | {reason} |
+| 5 | 🛡️ Security | Sec1-Sec12 | ✅ | {reason} |
+| 6 | 🌐 Domain | {F/B/S} | ✅ | {reason} |
+| 7 | 📏 Boundary | C1-C8+E1-E4 | ✅ | {reason} |
 
-## Remediation Priority
-### Must Fix
-### Should Fix
-### Nice to Have
+## Execution Strategy
+- **Parallel batch 1**: Structure + Human + Vibe + Model
+- **Parallel batch 2** (depends on batch 1): Security + Domain + Boundary
+- **Synchronous**: Comparative Summary (after all agents return)
+
+## Estimates
+| Phase | Time | Deliverable |
+|-------|------|-------------|
+| Parallel execution | ~{N} min | 7 agent reports |
+| Comparative summary | ~2 min | Side-by-side analysis |
+| Total | ~{N+2} min | Full hedge report |
 ```
 
-## Exit Codes
+---
 
-- `0` = No issues found
-- `1` = Issues found (count in output)
-- `2` = Bad args / path not found
+## Phase 2: Parallel Execution
+
+### 2.1 Spawn Rules
+
+Spawn agents using the `Agent` tool with `subagent_type: executor`. Each agent receives:
+- Its specific test scope (checklist from Phase 1)
+- Target file paths
+- Context about what to look for
+- Required output format
+
+**CRITICAL**: All agents run in parallel in batch 1. Wait for all to return before Comparative Summary.
+
+### 2.2 Agent Prompt Templates
+
+#### Agent: Structure
+```
+You are the Structure Hedge agent. Test target skill's structural integrity.
+Target: {file_path}
+
+Check these items and return a structured report:
+{A1-A13 checklist}
+
+For each check, return:
+- ID, Name, Status (✅/❌), Severity, Evidence (quote from file), Recommendation
+```
+
+#### Agent: Human
+```
+You are the Human Persona agent. Simulate an impatient user who doesn't read docs.
+Target: {file_path}
+
+Test these scenarios:
+{H1-H8 checklist}
+
+For each test, return:
+- ID, Test, Status (Pass/Fail), Risk, Evidence, What should happen instead
+```
+
+#### Agent: Vibe
+```
+You are the Vibe Coder agent. Simulate a developer who copy-pastes without reading.
+Target: {file_path}
+
+Test these scenarios:
+{V1-V8 checklist}
+
+For each test, return:
+- ID, Test, Status (Pass/Fail), Risk, Evidence, Fix recommendation
+```
+
+#### Agent: Model
+```
+You are the Literal Model agent. Simulate an LLM that follows instructions to the letter.
+Target: {file_path}
+
+Test these scenarios:
+{M1-M8 checklist}
+
+For each test, return:
+- ID, Test, Status (Pass/Fail), Risk, Evidence, Clarification needed
+```
+
+#### Agent: Security
+```
+You are the Security Hedge agent. Find vulnerabilities in code.
+Target: {path}
+
+Run hedge-sec-scan.py, then manually review high-risk areas:
+python hedge-sec-scan.py {path} --severity=low --format=md
+
+Also check:
+{Sec1-Sec12 + Vibe1-Vibe6 checklist}
+
+For each finding, return:
+- ID, Name, Severity, File:Line, Evidence, Fix, Why vibe coders miss this
+```
+
+#### Agent: Domain
+```
+You are the Domain Hedge agent. Check domain-specific issues.
+Target: {file_path}
+Domain: {frontend|backend|fullstack}
+
+Test these items:
+{F1-F13 or B1-B15 or S1-S13 checklist}
+
+For each test, return:
+- ID, Test, Status, Risk, Evidence, Domain-specific fix
+```
+
+#### Agent: Boundary
+```
+You are the Boundary & Consistency agent. Test edge cases.
+Target: {file_path}
+
+Test these scenarios:
+{C1-C8 + E1-E4 checklist}
+
+For each test, return:
+- ID, Test, Status, Risk, Evidence, Expected behavior
+```
+
+### 2.3 Execution Flow
+
+```
+Batch 1 (parallel):
+  ├─ Agent-Structure ──→ Report-Structure
+  ├─ Agent-Human ──────→ Report-Human
+  ├─ Agent-Vibe ───────→ Report-Vibe
+  ├─ Agent-Model ──────→ Report-Model
+  ├─ Agent-Security ───→ Report-Security
+  ├─ Agent-Domain ─────→ Report-Domain
+  └─ Agent-Boundary ───→ Report-Boundary
+
+Wait for ALL to complete.
+
+Then: Comparative Summary
+```
+
+---
+
+## Phase 3: Comparative Summary
+
+### 3.1 Merge Results
+
+Collect all 7 agent reports. Normalize into common format:
+
+```yaml
+finding:
+  id: {agent_id}-{check_id}
+  agent: {structure|human|vibe|model|security|domain|boundary}
+  category: {structure|persona|domain|security|boundary}
+  severity: {critical|high|medium|low}
+  status: {pass|fail}
+  file: {path}
+  line: {N}
+  evidence: {quote}
+  impact: {what could go wrong}
+  fix: {specific recommendation}
+  agent_reasoning: {why this agent caught it}
+```
+
+### 3.2 Cross-Agent Analysis
+
+**Compare findings across agents to find patterns:**
+
+| Analysis Type | Method | Example |
+|---------------|--------|---------|
+| **Overlap** | Same issue found by multiple agents | Security + Vibe both flag SQL injection |
+| **Blind Spot** | High-risk area, no agent flagged | No agent checked auth on DELETE endpoint |
+| **Conflict** | Agents disagree | Structure says "good examples", Human says "confusing" |
+| **Cascade** | One issue causes multiple findings | Missing validation → SQL injection + XSS + Path traversal |
+
+### 3.3 Comparative Report Template
+
+```markdown
+# 🛡️ Hedge Comparative Report: {name}
+
+## Executive Summary
+| Metric | Value |
+|--------|-------|
+| **Combined Score** | {combined}/100 ({rating}) |
+| **Target** | {name} ({type}, {lines}L) |
+| **Agents Deployed** | {N}/7 |
+| **Total Checks** | {N} |
+| **Findings** | {c}🔴 {h}🟠 {m}🟡 {l}🟢 |
+| **Duration** | {time} |
+
+## Agent Performance (Side-by-Side)
+
+| Agent | Score | 🔴 | 🟠 | 🟡 | 🟢 | Status |
+|-------|-------|----|----|----|----|--------|
+| 🔧 Structure | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 👤 Human | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🎨 Vibe | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🤖 Model | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🛡️ Security | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🌐 Domain | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 📏 Boundary | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+
+## Cross-Agent Analysis
+
+### 🔴 Critical Overlaps (Confirmed by multiple agents)
+| Issue | Agents | Severity | Consensus |
+|-------|--------|----------|-----------|
+| {issue} | {agent1} + {agent2} | 🔴 | Strong |
+
+### 🟠 Blind Spots (High-risk, unflagged)
+| Area | Risk | Why Missed | Recommendation |
+|------|------|------------|----------------|
+| {area} | 🔴 | No agent checked X | Add check to {agent} |
+
+### 🟡 Conflicts (Agents disagree)
+| Area | Agent A says | Agent B says | Resolution |
+|------|-------------|-------------|------------|
+| {area} | "Good" | "Confusing" | Weight toward user impact |
+
+## Detailed Findings by Severity
+
+### 🔴 Critical
+| ID | Agent | Issue | File | Fix |
+|----|-------|-------|------|-----|
+| ... | ... | ... | ... | ... |
+
+### 🟠 High
+| ID | Agent | Issue | File | Fix |
+|----|-------|-------|------|-----|
+| ... | ... | ... | ... | ... |
+
+### 🟡 Medium
+| ID | Agent | Issue | File | Fix |
+|----|-------|-------|------|-----|
+| ... | ... | ... | ... | ... |
+
+## Remediation Priority
+
+### 🔴 Must Fix (Critical)
+1. [ ] {issue} → {fix} (found by {agents})
+
+### 🟠 Should Fix (High)
+1. [ ] {issue} → {fix} (found by {agents})
+
+### 🟡 Nice to Have (Medium/Low)
+1. [ ] {issue} → {fix} (found by {agents})
+
+## Heat Map
+```
+Structure:  ████████░░ {n}%
+Human:      █████▌░░░░ {n}%
+Vibe:       ████░░░░░░ {n}%
+Model:      █████▎░░░░ {n}%
+Security:   ██████░░░░ {n}%
+Domain:     ██████░░░░ {n}%
+Boundary:   █████▌░░░░ {n}%
+```
+
+## Agent Notes
+
+### 🔧 Structure Agent
+{summary of structure findings}
+
+### 👤 Human Agent
+{summary of human findings}
+
+### 🎨 Vibe Agent
+{summary of vibe findings}
+
+### 🤖 Model Agent
+{summary of model findings}
+
+### 🛡️ Security Agent
+{summary of security findings}
+
+### 🌐 Domain Agent
+{summary of domain findings}
+
+### 📏 Boundary Agent
+{summary of boundary findings}
+
+---
+*Hedge v3.0 | Comparative Summary | {date}*
+```
+
+---
+
+## Phase 1-6: Test Checklists (Agent References)
+
+### Phase 1: Structure Hedge (A1-A13)
+
+| ID | Check | Fail Mode | Sev |
+|----|-------|-----------|-----|
+| A1 | Valid YAML frontmatter | Not loadable | 🔴 |
+| A2 | `name` exists, kebab-case | Cannot invoke | 🔴 |
+| A3 | `description` ≤1024 chars, starts with trigger | Never triggers | 🔴 |
+| A4 | Trigger patterns explicit in description | Ambiguous activation | 🟠 |
+| A5 | Has `When to Use` | Wrong context | 🟠 |
+| A6 | Has `When NOT to Use` | Dangerous misuse | 🔴 |
+| A7 | Has Examples/Templates | Hallucination risk | 🟠 |
+| A8 | Lines ≤ 500 | Model ignores | 🟡 |
+| A9 | No placeholders TBD/TODO/FIXME | Incomplete runtime | 🟠 |
+| A10 | `argument-hint` matches actual args | User confusion | 🟡 |
+| A11 | Referenced files exist | Broken deps | 🟡 |
+| A12 | Exit/Cleanup instructions (if stateful) | State pollution | 🟠 |
+| A13 | Safety warnings (if destructive) | Accidental damage | 🔴 |
+
+### Phase 2: Persona-Based Adversarial Tests
+
+#### Persona 1: Impatient Human 👤
+
+| ID | Test | Technique | What to Check |
+|----|------|-----------|--------------|
+| H1 | Skipped preamble | Invoke without reading description | Self-explanatory on first use? |
+| H2 | Vague intent | "Do the thing" / "Fix it" | Asks for clarification? |
+| H3 | Wrong assumptions | Assumes skill does X, actually does Y | Corrects misunderstandings? |
+| H4 | Impatience | "Just do it quickly" | Maintains quality under pressure? |
+| H5 | Context amnesia | Invoke in wrong conversation | Detects wrong context? |
+| H6 | Partial info | Give half the requirements | Identifies missing info? |
+| H7 | Copy-paste error | Paste wrong content | Validates inputs? |
+| H8 | Escalation demand | "I need admin access" | Enforces authority boundaries? |
+
+#### Persona 2: Vibe Coder 🎨
+
+| ID | Test | Technique | What to Check |
+|----|------|-----------|--------------|
+| V1 | Vibe invocation | Use because "sounds right" | Trigger clarity prevents misuse? |
+| V2 | Ignore prerequisites | Skip setup, run immediately | Checks preconditions? |
+| V3 | Blind copy-paste | Copy output without reading | "Verify before using" warnings? |
+| V4 | SO mashup | Mix with random snippets | Self-contained output? |
+| V5 | No verification | Accept first output | Built-in verification steps? |
+| V6 | Cargo cult | Use on wrong project type | Detects project mismatch? |
+| V7 | YOLO execution | Run commands without reading | Dangerous ops marked? |
+| V8 | Vibe override | "I know better" | Explains WHY? |
+
+#### Persona 3: Literal Model 🤖
+
+| ID | Test | Technique | What to Check |
+|----|------|-----------|--------------|
+| M1 | Over-literal | Ignore obvious intent | Unambiguous instructions? |
+| M2 | Hallucinated capability | Claim ability it doesn't have | Claims verifiable? |
+| M3 | Context collapse | Ignore history | References context? |
+| M4 | Tool sequence error | Wrong order due to ambiguity | Sequences explicit? |
+| M5 | Infinite loop | Self-referential instruction | Loop detection/termination? |
+| M6 | Conflicting instructions | Two parts contradict | Internally consistent? |
+| M7 | Edge literalism | Apply to unintended case | Scope boundaries clear? |
+| M8 | Authority overreach | "Help" = modify anything | Permission boundaries explicit? |
+
+### Phase 3: Domain-Specific Hedge
+
+#### Category F: Frontend Hedge (UI/Web Skills)
+
+| ID | Test | Failure Mode | Sev |
+|----|------|-------------|-----|
+| F1 | Desktop-first output | Generates fixed-width desktop layout | 🔴 Mobile users broken |
+| F2 | Fixed widths | Uses `px` for layout containers | 🟠 Not responsive |
+| F3 | Too many breakpoints | >5 arbitrary breakpoints | 🟡 Bloated CSS |
+| F4 | Hover-only interactions | No touch-friendly alternative | 🔴 Mobile unusable |
+| F5 | Tiny touch targets | Buttons < 44×44px | 🟠 Accessibility fail |
+| F6 | Horizontal scroll | Unintended overflow-x | 🟡 UX issue |
+| F7 | Ignores landscape | Only tests portrait | 🟡 Layout breaks |
+| F8 | No real-device test | Only emulator/emulated | 🟠 Real bugs missed |
+| F9 | Missing alt/aria | Images without alt, no ARIA | 🔴 Accessibility violation |
+| F10 | v-if + v-for (Vue) | Uses both on same element | 🟠 Vue anti-pattern |
+| F11 | Accessibility untested | No zoom/contrast/keyboard check | 🟡 WCAG non-compliant |
+| F12 | Visual regression | No screenshot comparison | 🟡 UI drift unnoticed |
+| F13 | Copy-paste breakpoint blindness | Uses framework defaults without content analysis | 🟡 Wrong breakpoints |
+
+#### Category B: Backend Hedge (API/DB/Server Skills)
+
+| ID | Test | Failure Mode | Sev |
+|----|------|-------------|-----|
+| B1 | ORM convention violation | Migration ignores existing ORM patterns | 🔴 Breaks data layer |
+| B2 | Inappropriate DB drop | Drops DB based on wrong env assumption | 🔴 Data loss |
+| B3 | Reimplements existing utils | Duplicates connection helpers/query builders | 🟠 Code bloat |
+| B4 | Over-engineered defense | Null checks for non-nullables, impossible catch blocks | 🟡 Noise/complexity |
+| B5 | Duplicate API endpoints | Creates endpoint when one exists | 🟠 Maintenance burden |
+| B6 | Scope creep | Modifies Docker/frontend when asked for backend | 🔴 Unintended changes |
+| B7 | "Improves" instead of migrates | Editorializes during 1:1 port | 🟠 Introduces bugs |
+| B8 | Backward-compatibility paranoia | Preserves dead code in greenfield | 🟡 Technical debt |
+| B9 | Deletes/skips failing tests | `.skip` or removes assertions | 🔴 False confidence |
+| B10 | Tests assert bugs | Validates incorrect behavior | 🔴 Worse than no tests |
+| B11 | AI slop tests | Stubs all deps, asserts nothing | 🟠 Useless coverage |
+| B12 | Ignores caching layer | Bypasses existing Redis/memcached | 🟠 Performance hit |
+| B13 | Not reading surrounding code | Works in isolation, breaks conventions | 🟠 System breakage |
+| B14 | Over-abstraction | Class hierarchies for one-liners | 🟡 Unnecessary complexity |
+| B15 | Hallucinated APIs | Calls non-existent API methods | 🔴 Compilation/runtime fail |
+
+#### Category S: Full-Stack / E2E Hedge (Integration Skills)
+
+| ID | Test | Failure Mode | Sev |
+|----|------|-------------|-----|
+| S1 | Port lingering after cleanup | `kill -9` misses process group | 🔴 Subsequent runs fail |
+| S2 | Snapshot ref instability | DOM refs shift between runs | 🟠 Brittle tests |
+| S3 | Readiness deception | Server 200s before bundle ready | 🔴 False positive |
+| S4 | Browser session conflict | Previous browser not closed | 🟠 "Already in use" error |
+| S5 | Cross-tenant leakage | User A sees User B data | 🔴 Security breach |
+| S6 | Path traversal | Missing input validation on paths | 🔴 CWE-22 |
+| S7 | Auto-commit without confirm | Pushes unreviewed changes | 🔴 Shared branch pollution |
+| S8 | False completion claim | "Fixed!" when nothing fixed | 🔴 Trust erosion |
+| S9 | Fallback to mock data | Silent stub substitution | 🟠 False confidence |
+| S10 | Context compaction drift | CLAUDE.md rules lost mid-session | 🟠 Convention violations |
+| S11 | No data persistence check | UI looks fine, data not saved | 🔴 Most commonly missed |
+| S12 | Malicious compliance | Literal interpretation → absurd result | 🟠 Nonsensical output |
+| S13 | Brittle dependency chain | Manual handoff breaks | 🟠 Workflow failure |
+
+### Phase 4: Boundary & Consistency Hedge
+
+#### Boundary Tests
+
+| ID | Test | Scope |
+|----|------|-------|
+| C1 | Empty/null input | Always |
+| C2 | Oversized input (>10k chars) | Medium+ |
+| C3 | Special chars (emoji, unicode, control) | Medium+ |
+| C4 | Recursive self-invocation | Complex+ |
+| C5 | Parallel multi-instance | Complex+ |
+| C6 | State pollution across runs | Stateful |
+| C7 | Cancellation mid-flight | Complex+ |
+| C8 | Resource exhaustion | Complex+ |
+
+#### Consistency Tests
+
+| ID | Test | Method |
+|----|------|--------|
+| E1 | Determinism | Same input ×3, compare |
+| E2 | Idempotence | Run twice on same state |
+| E3 | Commutativity | Order of independent ops |
+| E4 | Monotonicity | More info → better result |
+
+### Phase 6: Security Attack Detection (Sec)
+
+#### Category Sec: Injection & Security Hedge
+
+| ID | Check | Failure Mode | Sev | Why Vibe Coders Hit This |
+|----|-------|-------------|-----|-------------------------|
+| Sec1 | SQL Injection | String concatenation/template literals in SQL queries | 🔴 RCE/Data breach | AI generates `db.query(\`SELECT * FROM users WHERE id = ${req.params.id}\`)` — vibe coder pastes and ships |
+| Sec2 | Command Injection | `exec()`, `os.system()`, `child_process.exec()` with user input | 🔴 RCE | AI suggests `os.system("ping " + user_input)` for "network diagnostic feature" |
+| Sec3 | XSS / Reflected Input | `innerHTML`, `dangerouslySetInnerHTML`, unescaped template output | 🔴 Session hijacking | AI uses `innerHTML` for dynamic content. Vibe coder copies without sanitization |
+| Sec4 | Path Traversal (CWE-22) | File access with user-controlled path | 🔴 Arbitrary file read/write | AI generates `fs.readFileSync(req.query.file)` for "serve file by name" |
+| Sec5 | Insecure Deserialization | `pickle.loads()`, `eval()`, `yaml.load()` on untrusted data | 🔴 RCE | AI suggests `pickle` or `eval` for "quick parsing" — vibe coder puts it in request handler |
+| Sec6 | Hardcoded Secrets | API keys, passwords, DB connection strings in source | 🟠 Credential leak | AI examples include `API_KEY = "sk-xxx"`. Vibe coder replaces with real key and commits |
+| Sec7 | SSRF / Open Redirect | `fetch()`/`requests.get()` with user-controlled URL | 🟠 Internal probe / phishing | AI generates `fetch(req.query.url)` for "URL preview". No validation |
+| Sec8 | eval/exec Abuse | `eval()`, `new Function()`, `exec()` anywhere in code | 🔴 Arbitrary code execution | AI uses `eval()` for "dynamic property access". Vibe coder never questions it |
+| Sec9 | ReDoS (Regex DoS) | Nested quantifiers in regex patterns | 🟡 Denial of Service | AI generates complex validation regexes. Vibe coder copies without ReDoS testing |
+| Sec10 | Debug Mode in Production | `debug=True`, `NODE_ENV=development`, stack traces to client | 🟠 Info disclosure | AI starter code has `debug=True`. Vibe coder deploys as-is |
+| Sec11 | Overly Permissive CORS | `Access-Control-Allow-Origin: *` on authenticated APIs | 🟠 CSRF bypass | AI suggests `cors()` to "fix CORS errors". Vibe coder applies globally |
+| Sec12 | Missing Input Validation | User input flows directly to DB/files/commands without validation | 🟠 Multi-category risk | AI chains `req.body` straight to DB. No validation layer exists |
+
+#### Vibe-Coding Specific Security Anti-Patterns
+
+| ID | Pattern | Why It Happens | Detection |
+|----|---------|---------------|-----------|
+| Vibe1 | NoSQL Injection via `.find(req.body)` | AI can't figure out ORM syntax, suggests "flexible search" | Look for `find()`, `findOne()` with `$` operators from user input |
+| Vibe2 | Trust User Input for File Deletion | AI generates "delete user file" endpoint | Look for `fs.unlink()`, `os.remove()` with req/query params |
+| Vibe3 | Trust User Input for DB IDs | AI generates `findById(req.params.id)` | Look for findById/findByPk with unvalidated string input |
+| Vibe4 | AI Slop — Copy-Paste Test Code to Prod | AI generates tests with mock data, vibe coder deploys | Look for `mock`, `test`, `fixture` data in non-test files |
+| Vibe5 | Stack Trace in API Response | AI returns `err.stack` for "better debugging" | Look for error responses containing `stack`, `trace`, file paths |
+| Vibe6 | `| safe` / Triple Mustache Disable | AI output doesn't render, vibe coder disables escaping | Look for `{{{ }}}`, `\|safe`, `dangerouslySetInnerHTML` |
+
+#### Security Scanner Integration
+
+Use the bundled `hedge-sec-scan.py` for automated detection:
+
+```bash
+python hedge-sec-scan.py ./my-project --format=md
+python hedge-sec-scan.py ./my-project --severity=high
+python hedge-sec-scan.py ./my-project --format=json
+python hedge-sec-scan.py ./my-project --lang=js,py,ts
+```
+
+### Scoring
+
+```
+Applicable = All checks in selected agents
+Risk Points = Σ(Critical×10 + High×5 + Medium×2 + Low×1)
+Max = Applicable × 10
+Score = 100 - (Risk Points / Max × 100)
+```
+
+| Score | Rating | Verdict |
+|-------|--------|---------|
+| 90-100 | 🟢 Production Ready | Ship |
+| 75-89 | 🟡 Good with Notes | Fix highs, then ship |
+| 60-74 | 🟠 Needs Work | Fix critical+high first |
+| 40-59 | 🟠 Risky | Major rewrite |
+| 0-39 | 🔴 Dangerous | Do not use |
+
+---
 
 ## Safety Rules
 
-1. NEVER execute destructive commands to "test" vulnerabilities
-2. NEVER send real attack payloads to external services
-3. ALWAYS explain findings before suggesting fixes
-4. Respect code ownership — only scan code you created or have permission to scan
-5. Parallel agents must not interfere — each gets isolated or read-only context
+1. NEVER execute destructive commands during live tests
+2. NEVER send real data to external services during adversarial tests
+3. ALWAYS use isolated worktree for execution tests
+4. ALWAYS get user confirmation before Phase 2 (Confirm gate)
+5. Destructive targets (>high risk) require `--i-understand-risk` flag for live tests
+6. Respect skill ownership — only test skills you created or have permission to test
+7. Parallel agents must not interfere with each other — each gets read-only or isolated context
+
+## Invocation
+
+```bash
+/hedge                          # Auto-detect targets
+/hedge my-skill                 # Target specific skill
+/hedge ./my-project             # Target codebase
+/hedge my-skill --quick         # Structure only (1 agent)
+/hedge my-skill --deep          # Full parallel execution (7 agents)
+/hedge my-skill --security      # Security agent only
+/hedge ./src --security         # Scan codebase security
+/hedge my-skill --persona human # Human + Vibe + Model agents
+/hedge my-skill --domain backend # Domain + Security agents
+/hedge my-skill --parallel      # Force parallel execution
+/hedge my-skill --dry-run       # Plan only, no execution
+```
+
+---
+
+**Begin: Intent Recognition → Plan Design → AWAIT CONFIRMATION → Parallel Execution → Comparative Summary.**
