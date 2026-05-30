@@ -623,9 +623,20 @@ EXT_MAP: Dict[str, str] = {
 }
 
 SKIP_DIRS = {
+    # Package managers & virtual envs
     "node_modules", "venv", ".venv", "__pycache__", ".git", ".github",
-    "dist", "build", ".next", ".nuxt", "coverage", ".coverage",
-    "vendor", "target", "bin", "obj", ".idea", ".vscode",
+    # Build outputs
+    "dist", "build", ".next", ".nuxt", "out", "storybook-static",
+    # Framework caches
+    ".svelte-kit", ".turbo", ".parcel-cache", ".cache", ".docusaurus",
+    # Test & coverage
+    "coverage", ".coverage", "playwright-report",
+    # IDE & tooling
+    ".idea", ".vscode",
+    # Language-specific build dirs
+    "vendor", "target", "bin", "obj",
+    # Deployment
+    ".vercel", ".netlify",
 }
 
 # ────────────────────────────────
