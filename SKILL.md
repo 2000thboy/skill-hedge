@@ -1,6 +1,6 @@
 ---
 name: hedge
-description: USE WHEN the user wants to test, validate, stress-test, quality-check a skill, OR scan codebase for security vulnerabilities, OR design an adversarial testing plan. Auto-detects target, profiles risk surface, designs parallel adversarial plan, executes via sub-agents, produces comparative summary. For security scanning, runs hedge-sec-scan.py to detect SQL injection, XSS, path traversal, command injection, hardcoded secrets, SSRF, and other vibe-coding vulnerabilities. Triggers: "test this skill", "validate skill", "skill quality check", "hedge test", "find bugs in skill", "stress test skill", "scan security", "check vulnerabilities", "find injection bugs", "security audit", "对冲测试", "埋雷测试", "skill 质量验证", "安全扫描", "设计对冲计划", "并行测试", "adversarial test".
+description: USE WHEN testing/validating a skill or scanning codebase for security vulnerabilities. Auto-detects target, designs parallel adversarial plan with 7 sub-agents, executes, produces comparative summary. Runs hedge-sec-scan.py for SQL injection, XSS, path traversal, secrets, SSRF detection. Triggers: "test skill", "validate skill", "hedge test", "scan security", "check vulnerabilities", "security audit", "对冲测试", "埋雷测试", "安全扫描", "adversarial test".
 argument-hint: "[path-or-name] [--quick|--deep|--persona human|vibe|model|all|--domain backend|frontend|fullstack|--security|--dry-run|--parallel]"
 level: 3
 ---

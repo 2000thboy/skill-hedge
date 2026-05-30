@@ -520,6 +520,63 @@ RULES: List[Rule] = [
         recommendation="Validate ID format (UUID pattern, integer, ObjectId) before querying. Use ORM's type-safe methods.",
         vibe_context="AI generates User.findById(req.params.id). Vibe coders don't validate that id is actually a valid ObjectId/UUID.",
     ),
+
+    # ═══════════════════════════════════════
+    # CLI/API Argument Misuse (Sec13) — from recurring-cli-api-confusion
+    # ═══════════════════════════════════════
+    Rule(
+        id="Sec13-A",
+        name="CLI/API — Raw argv Access Without Bounds Check",
+        severity="medium",
+        category="config",
+        languages=("py", "js", "ts", "go", "rb"),
+        patterns=(
+            r'sys\.argv\[\d+\]',
+            r'process\.argv\[\d+\]',
+            r'os\.Args\[\d+\]',
+            r'ARGV\[\d+\]',
+        ),
+        description="Raw argv indexed access without checking length — IndexError/undefined on missing args",
+        recommendation="Use argparse/click (Python), yargs/minimist (JS), or clap (Go). If using raw argv, check len(argv) before indexing.",
+        vibe_context="AI generates sys.argv[1] without checking if any arguments were provided. Vibe coders run it with no args and get IndexError.",
+    ),
+
+    # ═══════════════════════════════════════
+    # State Management Security (Sec14) — from recurring-state-management
+    # ═══════════════════════════════════════
+    Rule(
+        id="Sec14-A",
+        name="State Management — External Input as State Key",
+        severity="high",
+        category="injection",
+        languages=("js", "ts", "py"),
+        patterns=(
+            r'state\[\s*(?:req\.|request\.|params\.|body\.|query\.)',
+            r'setState\s*\(\s*\{?\s*\[\s*(?:req\.|request\.|params\.|body\.|query\.)',
+            r'useState\s*\(\s*(?:req\.|request\.|params\.|body\.|query\.)',
+            r'dispatch\s*\(\s*\{[^}]*type\s*:\s*["\'][^"\']*["\'][^}]*payload\s*:\s*(?:req\.|request\.|params\.|body\.|query\.)',
+            r'store\.[a-zA-Z]+\s*=\s*(?:req\.|request\.|params\.|body\.|query\.)',
+        ),
+        description="User input used directly as state key or state value — can corrupt application state",
+        recommendation="Whitelist allowed state keys. Validate and sanitize before updating state. Use typed state management.",
+        vibe_context="AI generates state[req.params.key] = value for 'dynamic state updates'. Vibe coders don't realize this allows arbitrary state mutation.",
+    ),
+    Rule(
+        id="Sec14-B",
+        name="State Management — Multiple State Sources Without Sync",
+        severity="medium",
+        category="config",
+        languages=("js", "ts", "py", "go"),
+        patterns=(
+            r'(?i)state\.(?:[a-zA-Z_]+\.)*status\s*[=:]',
+            r'(?i)completed\s*[=:]\s*(?:true|false)',
+            r'(?i)stage\.status\s*[=:]',
+            r'(?i)pipeline\.[a-zA-Z]+\.status\s*[=:]',
+        ),
+        description="Multiple status/completion flags without centralized schema — state drift risk",
+        recommendation="Use a single source of truth for state. Define a Schema. All status updates go through one function.",
+        vibe_context="AI generates pipeline stages with separate completion flags. Vibe coders add more without centralizing, leading to inconsistent state.",
+    ),
 ]
 
 # ────────────────────────────────
