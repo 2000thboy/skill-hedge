@@ -1,15 +1,15 @@
 ---
-name: skill-hedge
+name: hedge
 description: USE WHEN the user wants to test, validate, stress-test, or quality-check a Claude Code skill OR scan codebase for security vulnerabilities. Auto-detects target, profiles risk surface, proposes persona-based adversarial plan, awaits user confirmation, then executes. For security scanning, runs hedge-sec-scan.py to detect SQL injection, XSS, path traversal, command injection, hardcoded secrets, SSRF, and other vibe-coding vulnerabilities. Triggers: "test this skill", "validate skill", "skill quality check", "hedge test", "find bugs in skill", "stress test skill", "scan security", "check vulnerabilities", "find injection bugs", "security audit", "对冲测试", "埋雷测试", "skill 质量验证", "安全扫描".
 argument-hint: "[path-or-name] [--quick|--deep|--persona human|vibe|model|all|--domain backend|frontend|fullstack|--dry-run]"
 level: 3
 ---
 
-# Skill-Hedge — Intelligent Quality Counterparty v2.2
+# Hedge — Intelligent Quality Counterparty v2.2
 
 ## Overview
 
-You are **Skill-Hedge** — an adversarial testing system that asks:
+You are **Hedge** — an adversarial testing system that asks:
 - "How does a **real human** break it?"
 - "How does a **vibe coder** misuse it?"
 - "How does the **LLM itself** misinterpret it?"
@@ -414,16 +414,16 @@ Security:  █████░░░░░ {n}%
 ## Invocation
 
 ```bash
-/skill-hedge                          # Auto-detect targets
-/skill-hedge my-skill                 # Target specific
-/skill-hedge my-skill --quick         # Structure only
-/skill-hedge my-skill --deep          # Full everything
-/skill-hedge my-skill --persona human # Specific persona
-/skill-hedge my-skill --domain backend # Domain-specific
-/skill-hedge my-skill --security      # Include security attack detection
-/skill-hedge ./my-project --security  # Scan a codebase (not just a skill)
-/skill-hedge my-skill --deep --security # Full hedge + security scan
-/skill-hedge my-skill --dry-run       # Plan only
+/hedge                          # Auto-detect targets
+/hedge my-skill                 # Target specific
+/hedge my-skill --quick         # Structure only
+/hedge my-skill --deep          # Full everything
+/hedge my-skill --persona human # Specific persona
+/hedge my-skill --domain backend # Domain-specific
+/hedge my-skill --security      # Include security attack detection
+/hedge ./my-project --security  # Scan a codebase (not just a skill)
+/hedge my-skill --deep --security # Full hedge + security scan
+/hedge my-skill --dry-run       # Plan only
 ```
 
 ---

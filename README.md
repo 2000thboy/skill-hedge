@@ -1,4 +1,4 @@
-# Skill-Hedge
+# Hedge
 
 > 软件对冲测试框架 —— 用对抗视角验证代码与系统的质量
 
@@ -6,14 +6,14 @@
 
 ## 项目简介
 
-**Skill-Hedge** 是一个对抗性质量测试框架，覆盖两个层面：
+**Hedge** 是一个对抗性质量测试框架，覆盖两个层面：
 
 1. **Skill 层** —— 验证 Claude Code Skill 在面对真实用户误用、模糊意图和模型过度字面化时，是否依然安全、可靠、可用
 2. **软件层** —— 扫描前后端代码中的安全漏洞，特别是 AI 生成代码（vibe-coding）中常见的注入攻击、路径遍历、XSS、SSRF 等风险
 
-不同于传统的代码测试工具（如 `auto-verify`、`ultraqa` 验证代码正确性），Skill-Hedge 问的是：**"这段代码在真实攻击者手里会出事吗？"**
+不同于传统的代码测试工具（如 `auto-verify`、`ultraqa` 验证代码正确性），Hedge 问的是：**"这段代码在真实攻击者手里会出事吗？"**
 
-核心理念：每个系统都有三个"对手"在等着打破它。Skill-Hedge 就是帮你提前找到这些破绽。
+核心理念：每个系统都有三个"对手"在等着打破它。Hedge 就是帮你提前找到这些破绽。
 
 ---
 
@@ -49,10 +49,10 @@ Target Skill ◄── Human (impatient, vague) ──►
 
 ```bash
 # 克隆到 Claude Code Skill 目录
-git clone https://github.com/2000thboy/skill-hedge.git ~/.claude/skills/skill-hedge
+git clone https://github.com/2000thboy/hedge.git ~/.claude/skills/hedge
 ```
 
-安装完成后，在 Claude Code 中即可通过 `/skill-hedge` 调用。
+安装完成后，在 Claude Code 中即可通过 `/hedge` 调用。
 
 ---
 
@@ -61,13 +61,13 @@ git clone https://github.com/2000thboy/skill-hedge.git ~/.claude/skills/skill-he
 ### Skill 对冲测试
 
 ```bash
-/skill-hedge                          # 自动检测目标 Skill
-/skill-hedge my-skill                 # 指定目标 Skill
-/skill-hedge my-skill --quick         # 快速模式：仅结构检查
-/skill-hedge my-skill --deep          # 深度模式：全量测试
-/skill-hedge my-skill --persona human # 仅测试指定对手视角
-/skill-hedge my-skill --domain backend # 仅测试指定领域
-/skill-hedge my-skill --dry-run       # 仅生成计划，不执行
+/hedge                          # 自动检测目标 Skill
+/hedge my-skill                 # 指定目标 Skill
+/hedge my-skill --quick         # 快速模式：仅结构检查
+/hedge my-skill --deep          # 深度模式：全量测试
+/hedge my-skill --persona human # 仅测试指定对手视角
+/hedge my-skill --domain backend # 仅测试指定领域
+/hedge my-skill --dry-run       # 仅生成计划，不执行
 ```
 
 ### 软件安全扫描（前后端代码）
@@ -107,7 +107,7 @@ python hedge-sec-scan.py . --lang=js,py,ts
 
 ## 对冲测试类别
 
-Skill-Hedge 的测试分为六大类别：
+Hedge 的测试分为六大类别：
 
 ### 1. Structure Hedge（结构检查）
 
@@ -258,15 +258,15 @@ Backend:     ████████▌░ 88%
 |------|----------|----------|----------|
 | **auto-verify** | 生成的代码 | 静态检查 + 运行验证 | 验证代码是否正确运行 |
 | **ultraqa** | 代码质量 | 规则扫描 + 模式匹配 | 验证代码是否符合规范 |
-| **skill-hedge** | **Skill + 代码** | **对抗性测试 + 安全扫描 + 对手模拟** | **验证 Skill 是否 robust；验证代码是否有注入等安全漏洞** |
+| **hedge** | **Skill + 代码** | **对抗性测试 + 安全扫描 + 对手模拟** | **验证 Skill 是否 robust；验证代码是否有注入等安全漏洞** |
 
 关键区别：
 
 - `auto-verify` 回答的是"**代码对吗？**"
 - `ultraqa` 回答的是"**代码规范吗？**"
-- `skill-hedge` 回答的是"**这个系统在被攻击时会出事吗？**"
+- `hedge` 回答的是"**这个系统在被攻击时会出事吗？**"
 
-Skill-Hedge 同时覆盖两个维度：
+Hedge 同时覆盖两个维度：
 1. **Skill 设计层** —— 触发条件是否清晰、边界处理是否完善、面对误用时是否有防护
 2. **代码安全层** —— SQL 注入、XSS、路径遍历、命令注入、硬编码密钥等实际漏洞
 
@@ -278,4 +278,4 @@ MIT License
 
 ---
 
-*Skill-Hedge v2.2 — Intelligent Quality Counterparty*
+*Hedge v2.2 — Intelligent Quality Counterparty*

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 hedge-sec-scan.py — Security vulnerability scanner for vibe-coded projects
-Part of skill-hedge. Detects common injection & security flaws across languages.
+Part of hedge. Detects common injection & security flaws across languages.
 
 Usage:
     python hedge-sec-scan.py <path> [--format=json|md] [--severity=low|medium|high|critical]
@@ -808,7 +808,7 @@ def format_json(result: ScanResult) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="hedge-sec-scan",
-        description="Security vulnerability scanner for vibe-coded projects — part of skill-hedge",
+        description="Security vulnerability scanner for vibe-coded projects — part of hedge",
     )
     parser.add_argument("path", help="File or directory to scan")
     parser.add_argument("--format", choices=["json", "md"], default="md", help="Output format")
