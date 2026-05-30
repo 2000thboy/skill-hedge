@@ -198,6 +198,38 @@ RULES: List[Rule] = [
     ),
 
     # ═══════════════════════════════════════
+    # XSS — Framework-Specific (Sec3-D, Sec3-E)
+    # ═══════════════════════════════════════
+    Rule(
+        id="Sec3-D",
+        name="XSS — Vue v-html with User Input",
+        severity="critical",
+        category="xss",
+        languages=("vue",),
+        patterns=(
+            r'v-html\s*=\s*["\']?\s*(?:req\.|request\.|params\.|body\.|query\.)',
+            r'v-html\s*=\s*["\']?\s*\{\{[^}]*(?:req\.|request\.|params\.|body\.|query\.)',
+        ),
+        description="Vue v-html directive with user input — equivalent to innerHTML, allows arbitrary HTML/JS execution",
+        recommendation="Avoid v-html with user input. Use {{ }} auto-escaping. If HTML is required, use DOMPurify before v-html.",
+        vibe_context="AI generates v-html for 'rich text display' with user content. Vibe coders copy without realizing it's Vue's innerHTML.",
+    ),
+    Rule(
+        id="Sec3-E",
+        name="XSS — Svelte {@html} with User Input",
+        severity="critical",
+        category="xss",
+        languages=("svelte",),
+        patterns=(
+            r'\{@html\s+(?:req\.|request\.|params\.|body\.|query\.)',
+            r'\{@html\s+[^}]*\$\{[^}]*(?:req\.|request\.|params\.|body\.|query\.)',
+        ),
+        description="Svelte {@html} expression with user input — renders raw HTML without escaping",
+        recommendation="Never use {@html} with user input. Use regular Svelte expressions { } which auto-escape. Sanitize with DOMPurify if HTML is required.",
+        vibe_context="AI uses {@html} for 'rendering HTML content'. Vibe coders paste user input directly into it.",
+    ),
+
+    # ═══════════════════════════════════════
     # Path Traversal (Sec4)
     # ═══════════════════════════════════════
     Rule(
@@ -587,7 +619,7 @@ EXT_MAP: Dict[str, str] = {
     ".py": "py", ".js": "js", ".ts": "ts", ".jsx": "js", ".tsx": "ts",
     ".java": "java", ".php": "php", ".go": "go", ".rb": "rb",
     ".yaml": "yaml", ".yml": "yaml", ".json": "json", ".env": "env",
-    ".html": "html", ".htm": "html", ".vue": "js", ".svelte": "js",
+    ".html": "html", ".htm": "html", ".vue": "vue", ".svelte": "svelte",
 }
 
 SKIP_DIRS = {
