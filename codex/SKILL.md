@@ -1,16 +1,30 @@
 ---
 name: hedge
-description: Security vulnerability scanner for vibe-coded projects AND adversarial quality tester for skills. Detects SQL injection, command injection, XSS, path traversal, hardcoded secrets, SSRF, and other common attack patterns in AI-generated code. Also tests skills for robustness against human misuse, vibe coder errors, and model literalism. Triggers when user asks to "scan security", "check vulnerabilities", "find injection bugs", "security audit", "test this skill", "validate skill", "hedge test", "review code security", or runs /hedge.
-argument-hint: "[path|skill-name] [--format=json|md] [--severity=low|medium|high|critical] [--lang=js,py,ts,java,php,go,rb] [--quick|--deep|--security|--dry-run]"
+description: Parallel adversarial testing framework for vibe-coded projects and skills. Spawns specialized sub-agents to attack from multiple dimensions simultaneously — Structure, Human, Vibe, Model, Security, Domain, Boundary — then produces a comparative summary. Detects SQL injection, XSS, path traversal, command injection, hardcoded secrets, SSRF, and other common attack patterns in AI-generated code. Also tests skills for robustness against human misuse, vibe coder errors, and model literalism. Triggers when user asks to "scan security", "check vulnerabilities", "find injection bugs", "security audit", "test this skill", "validate skill", "hedge test", "review code security", "design hedge plan", or runs /hedge.
+argument-hint: "[path|skill-name] [--format=json|md] [--severity=low|medium|high|critical] [--lang=js,py,ts,java,php,go,rb] [--quick|--deep|--security|--dry-run|--parallel]"
 user-invocable: true
 ---
 
-# Hedge — Software Hedge Testing & Security Scanning
+# Hedge — Parallel Adversarial Testing & Security Scanning
 
-You are **Hedge** — a security scanning system that asks:
-- "Where did the AI ship vulnerable code?"
-- "What did the vibe coder copy-paste without reviewing?"
-- "Which injection vectors exist in this codebase?"
+You are **Hedge** — a parallel adversarial testing system that designs multi-agent attacks, executes them simultaneously, and produces comparative summaries.
+
+**Workflow v3.0**: Intent → Plan → **Parallel Attack** → Comparative Summary
+
+```
+User Request → Intent Recognition → Plan Design
+                                    │
+                                    ▼
+              ┌─────────────────────────────────────────┐
+              │         PARALLEL EXECUTION               │
+              │  Structure  Human  Vibe  Model           │
+              │  Security   Domain  Boundary             │
+              └─────────────────────────────────────────┘
+                                    │
+                                    ▼
+                          Comparative Summary
+                          (side-by-side + delta)
+```
 
 ## When to Use
 
@@ -18,7 +32,8 @@ You are **Hedge** — a security scanning system that asks:
 - User generated code with AI and wants to know if it's safe
 - Before deploying a vibe-coded MVP or prototype
 - After a Codex run that produced backend/frontend code
-- When reviewing any codebase for injection risks
+- When testing a skill for robustness against misuse
+- When user wants a "hedge plan" or "adversarial review"
 
 ## When NOT to Use
 
@@ -28,11 +43,45 @@ You are **Hedge** — a security scanning system that asks:
 
 ## Workflow
 
-1. **Identify target** — File or directory to scan (default: current working directory)
-2. **Run scanner** — Execute `hedge-sec-scan.py` with appropriate flags
-3. **Interpret results** — Explain findings in context, not just dump output
-4. **Suggest fixes** — For each finding, explain the vulnerability AND the fix
-5. **Re-scan if needed** — After fixes, re-run to verify
+### Phase 1: Intent Recognition
+
+Classify the request:
+- **Target Type**: Skill | Codebase | Feature | Mixed
+- **User Concern**: Security | Robustness | Usability | Quality | Speed
+- **Auto-profile**: Read target, detect tech stack, map risk surface
+
+### Phase 2: Plan Design
+
+Select which agents to spawn based on target + concern:
+
+| Agent | Role | When Enabled |
+|-------|------|--------------|
+| 🔧 Structure | Structural integrity checks | Always |
+| 👤 Human | Simulate impatient user | usability/robustness/quality |
+| 🎨 Vibe | Simulate vibe coder | robustness/quality |
+| 🤖 Model | Simulate literal model | complex instructions |
+| 🛡️ Security | Find injection & vulnerabilities | security/code-generating targets |
+| 🌐 Domain | Domain-specific issues | known domain |
+| 📏 Boundary | Edge cases & consistency | complex targets |
+
+Present plan to user and await confirmation.
+
+### Phase 3: Parallel Execution
+
+Spawn all selected agents in parallel. Each agent focuses on ONE dimension and returns structured findings.
+
+Agents receive:
+- Target file paths
+- Specific checklist from their domain
+- Required output format
+
+### Phase 4: Comparative Summary
+
+Merge all agent reports and produce:
+- **Side-by-side agent scores** — which dimensions are strongest/weakest
+- **Cross-agent analysis** — overlaps, blind spots, conflicts
+- **Prioritized remediation** — sorted by severity + agent consensus
+- **Heat map** — visual overview of all dimensions
 
 ## Scanner Tool
 
@@ -71,7 +120,7 @@ These are patterns that AI-generated code frequently contains and vibe coders sh
 ## Execution
 
 ```bash
-# Basic scan
+# Basic scan (Security agent)
 python hedge-sec-scan.py . --format=md
 
 # Only critical and high
@@ -98,6 +147,31 @@ For each finding, explain:
 
 Do not just dump scanner output. Add value by explaining the business impact and providing concrete, copy-paste-ready fixes.
 
+## Comparative Report Format
+
+After parallel execution, produce:
+
+```markdown
+# Hedge Comparative Report: {name}
+
+## Agent Performance (Side-by-Side)
+| Agent | Score | 🔴 | 🟠 | 🟡 | 🟢 |
+|-------|-------|----|----|----|----|
+| Structure | {n}% | {c} | {h} | {m} | {l} |
+| Human | {n}% | ... | ... | ... | ... |
+| ... | ... | ... | ... | ... | ... |
+
+## Cross-Agent Analysis
+### Overlaps (Confirmed by multiple agents)
+### Blind Spots (Unflagged high-risk areas)
+### Conflicts (Agents disagree)
+
+## Remediation Priority
+### Must Fix
+### Should Fix
+### Nice to Have
+```
+
 ## Exit Codes
 
 - `0` = No issues found
@@ -110,3 +184,4 @@ Do not just dump scanner output. Add value by explaining the business impact and
 2. NEVER send real attack payloads to external services
 3. ALWAYS explain findings before suggesting fixes
 4. Respect code ownership — only scan code you created or have permission to scan
+5. Parallel agents must not interfere — each gets isolated or read-only context

@@ -6,14 +6,39 @@
 
 ## 项目简介
 
-**Hedge** 是一个对抗性质量测试框架，覆盖两个层面：
+**Hedge** 是一个对抗性质量测试框架，通过**并行子代理**从多个维度同时攻击目标，最终产出**对比总结报告**。
+
+覆盖两个层面：
 
 1. **Skill 层** —— 验证 Claude Code Skill 在面对真实用户误用、模糊意图和模型过度字面化时，是否依然安全、可靠、可用
 2. **软件层** —— 扫描前后端代码中的安全漏洞，特别是 AI 生成代码（vibe-coding）中常见的注入攻击、路径遍历、XSS、SSRF 等风险
 
-不同于传统的代码测试工具（如 `auto-verify`、`ultraqa` 验证代码正确性），Hedge 问的是：**"这段代码在真实攻击者手里会出事吗？"**
+**v3.0 核心流程**：需求识别 → 计划设计 → **并行对冲** → 对比总结
 
-核心理念：每个系统都有三个"对手"在等着打破它。Hedge 就是帮你提前找到这些破绽。
+```
+用户请求
+    │
+    ▼
+┌─────────────────┐     ┌─────────────────┐
+│  需求识别        │ ──→ │   计划设计       │
+│  Intent Recog   │     │   Plan Design   │
+└─────────────────┘     └─────────────────┘
+                              │
+                              ▼
+        ┌──────────────────────────────────────────┐
+        │           并行对冲 (7 个代理)              │
+        │  Structure │ Human │ Vibe │ Model │       │
+        │  Security  │ Domain│ Boundary              │
+        └──────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   对比总结        │
+                    │  交叉分析 / 优先级  │
+                    └─────────────────┘
+```
+
+不同于传统的代码测试工具（如 `auto-verify`、`ultraqa` 验证代码正确性），Hedge 问的是：**"这段代码在真实攻击者手里会出事吗？"**
 
 ---
 
@@ -58,17 +83,35 @@ git clone https://github.com/2000thboy/hedge.git ~/.claude/skills/hedge
 
 ## 使用方法
 
-### Skill 对冲测试
+### 并行对冲测试
 
 ```bash
-/hedge                          # 自动检测目标 Skill
+/hedge                          # 自动检测目标
 /hedge my-skill                 # 指定目标 Skill
-/hedge my-skill --quick         # 快速模式：仅结构检查
-/hedge my-skill --deep          # 深度模式：全量测试
-/hedge my-skill --persona human # 仅测试指定对手视角
-/hedge my-skill --domain backend # 仅测试指定领域
+/hedge ./my-project             # 指定代码目录
+/hedge my-skill --quick         # 快速模式：仅结构检查（1 个代理）
+/hedge my-skill --deep          # 深度模式：7 个代理并行对冲
+/hedge my-skill --parallel      # 强制并行执行
 /hedge my-skill --dry-run       # 仅生成计划，不执行
 ```
+
+**并行代理说明：**
+
+| 代理 | 职责 | 何时启用 |
+|------|------|----------|
+| 🔧 Structure | 结构完整性检查 | 始终 |
+| 👤 Human | 模拟没耐心的人类用户 | `--deep` 或 concern=usability |
+| 🎨 Vibe | 模拟凭感觉编码的开发者 | `--deep` 或 concern=robustness |
+| 🤖 Model | 模拟过度字面化的模型 | `--deep` 或复杂指令 |
+| 🛡️ Security | 扫描注入漏洞和安全风险 | `--security` 或 concern=security |
+| 🌐 Domain | 领域专项检查 (Frontend/Backend/Fullstack) | `--domain` 或识别到领域 |
+| 📏 Boundary | 边界情况和一致性测试 | `--deep` 或复杂目标 |
+
+**对比总结输出：**
+- 各代理评分并排对比
+- 交叉分析（重叠发现 / 盲点 / 冲突）
+- 按严重程度排序的修复建议
+- 可视化 Heat Map
 
 ### 软件安全扫描（前后端代码）
 
@@ -94,11 +137,12 @@ python hedge-sec-scan.py . --lang=js,py,ts
 | 参数 | 说明 |
 |------|------|
 | `[target]` | 目标 Skill 名称或路径，省略则自动检测 |
-| `--quick` | 仅执行 Phase 1 结构检查（2-3 分钟） |
-| `--deep` | 执行全部 Phase + 安全扫描（15-20 分钟） |
-| `--security` | 包含安全攻击检测 |
-| `--persona` | 指定对手：`human` / `vibe` / `model` / `all` |
-| `--domain` | 指定领域：`frontend` / `backend` / `fullstack` |
+| `--quick` | 仅执行结构检查代理（1 个代理，2-3 分钟） |
+| `--deep` | 执行全部 7 个代理并行对冲（15-20 分钟） |
+| `--security` | 包含安全攻击检测代理 |
+| `--persona` | 指定对手代理：`human` / `vibe` / `model` / `all` |
+| `--domain` | 指定领域代理：`frontend` / `backend` / `fullstack` |
+| `--parallel` | 强制并行执行所有代理 |
 | `--dry-run` | 生成测试计划并展示，等待用户确认 |
 | `--format` | 扫描输出格式：`md` / `json` |
 | `--severity` | 最低严重级别：`critical` / `high` / `medium` / `low` |
@@ -189,61 +233,58 @@ Score = 100 - (Risk Points / Max × 100)
 ### Hedge Report 格式
 
 ```markdown
-# Hedge Report: my-awesome-skill
+# Hedge Comparative Report: my-awesome-skill
 
-## Summary
+## Executive Summary
 | Metric | Value |
 |--------|-------|
-| **Hedge Score** | 87/100 (Good with Notes) |
+| **Combined Score** | 87/100 (Good with Notes) |
 | **Target** | my-awesome-skill (workflow, 180L) |
-| **Scope** | 3 personas + 2 domains + 45 checks |
-| **Issues** | 0 Critical  2 High  5 Medium  3 Low |
+| **Agents Deployed** | 7/7 |
+| **Total Checks** | 85 |
+| **Findings** | 0 Critical  2 High  5 Medium  3 Low |
 
-## Structure (A)
-| ID | Check | Status | Notes |
-|----|-------|--------|-------|
-| A1 | Valid YAML frontmatter | Pass | - |
-| A4 | Trigger patterns explicit | Pass | - |
-| A6 | Has When NOT to Use | Fail | Missing guardrails |
+## Agent Performance (Side-by-Side)
 
-## Personas
-### Human (score: 92%)
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| H2 | Vague intent | Pass | - | Asks for clarification |
-| H6 | Partial info | Fail | Medium | Does not detect missing requirements |
+| Agent | Score | 🔴 | 🟠 | 🟡 | 🟢 | Status |
+|-------|-------|----|----|----|----|--------|
+| 🔧 Structure | 80% | 0 | 1 | 2 | 10 | ⚠️ |
+| 👤 Human | 92% | 0 | 0 | 1 | 12 | ✅ |
+| 🎨 Vibe | 78% | 0 | 2 | 1 | 9 | ⚠️ |
+| 🤖 Model | 85% | 0 | 1 | 1 | 11 | ⚠️ |
+| 🛡️ Security | 90% | 0 | 0 | 2 | 10 | ✅ |
+| 🌐 Domain | 88% | 0 | 0 | 2 | 11 | ✅ |
+| 📏 Boundary | 95% | 0 | 0 | 1 | 13 | ✅ |
 
-### Vibe (score: 78%)
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| V3 | Blind copy-paste | Fail | High | No "verify before use" warning |
+## Cross-Agent Analysis
 
-### Model (score: 85%)
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| M5 | Infinite loop | Pass | - | Has iteration limit |
+### 🔴 Critical Overlaps (Confirmed by multiple agents)
+| Issue | Agents | Severity | Consensus |
+|-------|--------|----------|-----------|
+| Missing guardrails | Structure + Vibe | 🟠 | Strong |
 
-## Domain Specific
-### Backend (score: 88%)
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| B3 | Reimplements utils | Fail | Medium | Duplicates connection helper |
+### 🟡 Conflicts (Agents disagree)
+| Area | Agent A says | Agent B says | Resolution |
+|------|-------------|-------------|------------|
+| Example quality | Structure: "Good examples" | Human: "Confusing first example" | Weight toward user impact |
 
-## Remediation
+## Remediation Priority
 ### Must Fix
-- [ ] A6: Add "When NOT to Use" section with guardrails
+- [ ] A6: Add "When NOT to Use" section (found by Structure + Vibe)
 
 ### Should Fix
-- [ ] V3: Add "verify before using" warning for generated commands
-- [ ] H6: Detect and report missing requirements
+- [ ] V3: Add "verify before using" warning (found by Vibe)
+- [ ] H6: Detect missing requirements (found by Human)
 
 ## Heat Map
 ```
 Structure:  ████████░░ 80%
-Human:       ████████▌░ 92%
-Vibe:        ███████▌░░ 78%
-Model:       ████████▎░ 85%
-Backend:     ████████▌░ 88%
+Human:      ████████▌░ 92%
+Vibe:       ███████▌░░ 78%
+Model:      ████████▎░ 85%
+Security:   ████████░░ 90%
+Domain:     ████████▌░ 88%
+Boundary:   █████████▌ 95%
 ```
 
 ---
@@ -278,4 +319,4 @@ MIT License
 
 ---
 
-*Hedge v2.2 — Intelligent Quality Counterparty*
+*Hedge v3.0 — Parallel Adversarial Testing Framework*

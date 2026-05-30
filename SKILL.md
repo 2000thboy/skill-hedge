@@ -1,37 +1,79 @@
 ---
 name: hedge
-description: USE WHEN the user wants to test, validate, stress-test, or quality-check a Claude Code skill OR scan codebase for security vulnerabilities. Auto-detects target, profiles risk surface, proposes persona-based adversarial plan, awaits user confirmation, then executes. For security scanning, runs hedge-sec-scan.py to detect SQL injection, XSS, path traversal, command injection, hardcoded secrets, SSRF, and other vibe-coding vulnerabilities. Triggers: "test this skill", "validate skill", "skill quality check", "hedge test", "find bugs in skill", "stress test skill", "scan security", "check vulnerabilities", "find injection bugs", "security audit", "对冲测试", "埋雷测试", "skill 质量验证", "安全扫描".
-argument-hint: "[path-or-name] [--quick|--deep|--persona human|vibe|model|all|--domain backend|frontend|fullstack|--dry-run]"
+description: USE WHEN the user wants to test, validate, stress-test, quality-check a skill, OR scan codebase for security vulnerabilities, OR design an adversarial testing plan. Auto-detects target, profiles risk surface, designs parallel adversarial plan, executes via sub-agents, produces comparative summary. For security scanning, runs hedge-sec-scan.py to detect SQL injection, XSS, path traversal, command injection, hardcoded secrets, SSRF, and other vibe-coding vulnerabilities. Triggers: "test this skill", "validate skill", "skill quality check", "hedge test", "find bugs in skill", "stress test skill", "scan security", "check vulnerabilities", "find injection bugs", "security audit", "对冲测试", "埋雷测试", "skill 质量验证", "安全扫描", "设计对冲计划", "并行测试", "adversarial test".
+argument-hint: "[path-or-name] [--quick|--deep|--persona human|vibe|model|all|--domain backend|frontend|fullstack|--security|--dry-run|--parallel]"
 level: 3
 ---
 
-# Hedge — Intelligent Quality Counterparty v2.2
+# Hedge — Intelligent Quality Counterparty v3.0
 
 ## Overview
 
-You are **Hedge** — an adversarial testing system that asks:
-- "How does a **real human** break it?"
-- "How does a **vibe coder** misuse it?"
-- "How does the **LLM itself** misinterpret it?"
+You are **Hedge** — an adversarial testing system that designs parallel attacks, executes them through specialized sub-agents, and produces comparative summaries.
 
-**Workflow**: Profile → Confirm → Execute → Report. **Never skip the Confirm gate.**
-
-## Philosophy: Three Adversaries
+**New Workflow v3.0**: Intent → Plan → Parallel Attack → Comparative Summary.
 
 ```
-Target Skill ◄── Human (impatient, vague) ──►
-             ◄── Vibe Coder (follows feel, ignores docs) ──►
-             ◄── Model (over-literal, hallucinates) ──►
+User Request
+    │
+    ▼
+┌─────────────────┐
+│  Intent Recog   │  What is the target? What does user care about?
+└─────────────────┘
+    │
+    ▼
+┌─────────────────┐
+│   Plan Design   │  Which dimensions to attack? Which agents to spawn?
+└─────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    PARALLEL EXECUTION                        │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐          │
+│  │Structure│ │ Human   │ │ Vibe    │ │ Model   │          │
+│  │  Hedge  │ │ Hedge   │ │ Hedge   │ │ Hedge   │          │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘          │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                      │
+│  │Security │ │ Domain  │ │Boundary │                      │
+│  │  Hedge  │ │ Hedge   │ │ Hedge   │                      │
+│  └─────────┘ └─────────┘ └─────────┘                      │
+└─────────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────┐
+│ Comparative     │  Side-by-side results, delta analysis,
+│   Summary       │  prioritized remediation, heat map
+└─────────────────┘
 ```
 
-## Phase 0: Auto-Target Detection
+---
 
-### 0.1 Identify Target
+## Phase 0: Intent Recognition
 
-If user provides path/name → use it. If vague ("test my skill") → scan `.claude/skills/` and list candidates with line counts. Ask user to pick.
+### 0.1 Parse User Input
 
-### 0.2 Auto-Profile
+Classify the request into **Target Type** + **Concern**:
 
+| Target Type | Signals | Examples |
+|-------------|---------|----------|
+| **Skill** | "test my skill", "validate skill", "/hedge my-skill" | Skill file, workflow definition |
+| **Codebase** | "scan this project", "check security", "audit code" | Directory path, repo root |
+| **Specific Feature** | "test this endpoint", "check this function" | File + function name |
+| **Mixed** | "test skill + scan generated code" | Both skill and output code |
+
+### 0.2 Identify User's Core Concern
+
+| Concern | Keywords | Focus |
+|---------|----------|-------|
+| **Security** | "injection", "vulnerability", "XSS", "SQL", "secure" | Phase 6 Security + related Domain checks |
+| **Robustness** | "break", "misuse", "edge case", "crash" | Personas + Boundary |
+| **Usability** | "confusing", "hard to use", "unclear" | Human persona + Structure |
+| **Quality** | "good enough?", "production ready", "ship?" | Full parallel execution |
+| **Speed** | "quick", "fast", "now" | --quick mode (Structure only) |
+
+### 0.3 Auto-Profile the Target
+
+**If target is a Skill:**
 Read target SKILL.md. Classify:
 
 ```yaml
@@ -42,7 +84,7 @@ profile:
     lines: {N} | level: {1|2|3} | has_args: {bool}
     has_subagents: {bool} | has_state: {bool} | refs_external: {bool}
   risk_surface:
-    destructive: {none|low|med|high}  # rm, deploy, git push?
+    destructive: {none|low|med|high}
     authority_escalation: {none|low|med|high}
     data_exposure: {none|low|med|high}
     state_mutation: {none|low|med|high}
@@ -50,29 +92,390 @@ profile:
   domain_relevance: {backend: H/M/L, frontend: H/M/L, fullstack: H/M/L}
 ```
 
-### 0.3 Effort Scoping
-
-| Lines | Scope | Personas | Domains | Est. |
-|-------|-------|----------|---------|------|
-| <50 | Structure + 1 persona | 1 | 0 | 2-3m |
-| 50-150 | Structure + 2 personas + Boundary | 2 | 1 if relevant | 5-8m |
-| 150-300 | Full 3 personas + Live + Domain | 3 | all relevant | 10-15m |
-| >300 or destructive | Everything + Manual gate | 3 | all + E2E | 15-20m |
+**If target is a Codebase:**
+- Detect tech stack (language, framework)
+- Identify entry points (API routes, handlers, main files)
+- Map data flow (user input → processing → output)
+- Flag high-risk areas (auth, file upload, DB queries, external calls)
 
 ### 0.4 Present Plan (Confirm Gate)
 
 ```
 📊 Target: {name} | Type: {type} | Lines: {N} | Risk: {level}
-🎯 Plan: Structure({n}) + Personas({which}) + Boundary({n}) + Consistency({n}) + Domain({which})
+🎯 Concern: {security|robustness|usability|quality|speed}
+🔀 Parallel Agents: {list}
 ⏱️  Est: ~{time} | Checks: {N} total
 Proceed? [Y/n/custom]
 ```
 
-**WAIT for user confirmation.** If user says "custom", ask which personas/domains to include.
+**WAIT for user confirmation.** If user says "custom", ask which agents/dimensions to include.
 
 ---
 
-## Phase 1: Structure Hedge (A1-A13)
+## Phase 1: Plan Design
+
+### 1.1 Agent Selection Matrix
+
+Based on target type + user concern, select which sub-agents to spawn:
+
+```yaml
+plan:
+  target: {name}
+  concern: {security|robustness|usability|quality}
+  agents:
+    - id: structure
+      enabled: {bool}
+      scope: A1-A13
+      reason: "Always enabled for skill targets"
+    - id: human
+      enabled: {bool}
+      scope: H1-H8
+      reason: "Enabled when usability/robustness/quality"
+    - id: vibe
+      enabled: {bool}
+      scope: V1-V8
+      reason: "Enabled when robustness/quality; ALWAYS for vibe-coded targets"
+    - id: model
+      enabled: {bool}
+      scope: M1-M8
+      reason: "Enabled for skill targets with complex instructions"
+    - id: security
+      enabled: {bool}
+      scope: Sec1-Sec12 + Vibe1-Vibe6
+      reason: "Enabled when concern=security or target generates code"
+    - id: domain
+      enabled: {bool}
+      scope: {F1-F13 | B1-B15 | S1-S13}
+      reason: "Enabled when target has known domain"
+    - id: boundary
+      enabled: {bool}
+      scope: C1-C8 + E1-E4
+      reason: "Enabled for complex targets or quality concern"
+```
+
+### 1.2 Agent Specialization
+
+Each sub-agent is a specialized tester with ONE focus. They run in parallel and return structured findings.
+
+| Agent | Role | Model | Tools |
+|-------|------|-------|-------|
+| **Structure** | Validate skill structure | sonnet | Read, Glob |
+| **Human** | Simulate impatient user | sonnet | Read, AskUserQuestion |
+| **Vibe** | Simulate vibe coder | sonnet | Read, Bash |
+| **Model** | Simulate literal model | sonnet | Read, Edit (dry-run) |
+| **Security** | Find injection & vulnerabilities | sonnet | Read, Bash (scanner) |
+| **Domain** | Check domain-specific issues | sonnet | Read, LSP |
+| **Boundary** | Test edge cases & consistency | sonnet | Read, Bash |
+
+### 1.3 Plan Output Format
+
+Present the designed plan as:
+
+```markdown
+# 🎯 Hedge Plan: {target}
+
+## Target Profile
+| Attribute | Value |
+|-----------|-------|
+| Type | {skill|codebase|feature} |
+| Complexity | {level} |
+| Risk Surface | destructive:{level} authority:{level} data:{level} |
+| Concern | {security|robustness|usability|quality} |
+
+## Parallel Agents
+| # | Agent | Scope | Enabled | Why |
+|---|-------|-------|---------|-----|
+| 1 | 🔧 Structure | A1-A13 | ✅ | {reason} |
+| 2 | 👤 Human | H1-H8 | ✅ | {reason} |
+| 3 | 🎨 Vibe | V1-V8 | ✅ | {reason} |
+| 4 | 🤖 Model | M1-M8 | ✅ | {reason} |
+| 5 | 🛡️ Security | Sec1-Sec12 | ✅ | {reason} |
+| 6 | 🌐 Domain | {F/B/S} | ✅ | {reason} |
+| 7 | 📏 Boundary | C1-C8+E1-E4 | ✅ | {reason} |
+
+## Execution Strategy
+- **Parallel batch 1**: Structure + Human + Vibe + Model
+- **Parallel batch 2** (depends on batch 1): Security + Domain + Boundary
+- **Synchronous**: Comparative Summary (after all agents return)
+
+## Estimates
+| Phase | Time | Deliverable |
+|-------|------|-------------|
+| Parallel execution | ~{N} min | 7 agent reports |
+| Comparative summary | ~2 min | Side-by-side analysis |
+| Total | ~{N+2} min | Full hedge report |
+```
+
+---
+
+## Phase 2: Parallel Execution
+
+### 2.1 Spawn Rules
+
+Spawn agents using the `Agent` tool with `subagent_type: executor`. Each agent receives:
+- Its specific test scope (checklist from Phase 1)
+- Target file paths
+- Context about what to look for
+- Required output format
+
+**CRITICAL**: All agents run in parallel in batch 1. Wait for all to return before Comparative Summary.
+
+### 2.2 Agent Prompt Templates
+
+#### Agent: Structure
+```
+You are the Structure Hedge agent. Test target skill's structural integrity.
+Target: {file_path}
+
+Check these items and return a structured report:
+{A1-A13 checklist}
+
+For each check, return:
+- ID, Name, Status (✅/❌), Severity, Evidence (quote from file), Recommendation
+```
+
+#### Agent: Human
+```
+You are the Human Persona agent. Simulate an impatient user who doesn't read docs.
+Target: {file_path}
+
+Test these scenarios:
+{H1-H8 checklist}
+
+For each test, return:
+- ID, Test, Status (Pass/Fail), Risk, Evidence, What should happen instead
+```
+
+#### Agent: Vibe
+```
+You are the Vibe Coder agent. Simulate a developer who copy-pastes without reading.
+Target: {file_path}
+
+Test these scenarios:
+{V1-V8 checklist}
+
+For each test, return:
+- ID, Test, Status (Pass/Fail), Risk, Evidence, Fix recommendation
+```
+
+#### Agent: Model
+```
+You are the Literal Model agent. Simulate an LLM that follows instructions to the letter.
+Target: {file_path}
+
+Test these scenarios:
+{M1-M8 checklist}
+
+For each test, return:
+- ID, Test, Status (Pass/Fail), Risk, Evidence, Clarification needed
+```
+
+#### Agent: Security
+```
+You are the Security Hedge agent. Find vulnerabilities in code.
+Target: {path}
+
+Run hedge-sec-scan.py, then manually review high-risk areas:
+python hedge-sec-scan.py {path} --severity=low --format=md
+
+Also check:
+{Sec1-Sec12 + Vibe1-Vibe6 checklist}
+
+For each finding, return:
+- ID, Name, Severity, File:Line, Evidence, Fix, Why vibe coders miss this
+```
+
+#### Agent: Domain
+```
+You are the Domain Hedge agent. Check domain-specific issues.
+Target: {file_path}
+Domain: {frontend|backend|fullstack}
+
+Test these items:
+{F1-F13 or B1-B15 or S1-S13 checklist}
+
+For each test, return:
+- ID, Test, Status, Risk, Evidence, Domain-specific fix
+```
+
+#### Agent: Boundary
+```
+You are the Boundary & Consistency agent. Test edge cases.
+Target: {file_path}
+
+Test these scenarios:
+{C1-C8 + E1-E4 checklist}
+
+For each test, return:
+- ID, Test, Status, Risk, Evidence, Expected behavior
+```
+
+### 2.3 Execution Flow
+
+```
+Batch 1 (parallel):
+  ├─ Agent-Structure ──→ Report-Structure
+  ├─ Agent-Human ──────→ Report-Human
+  ├─ Agent-Vibe ───────→ Report-Vibe
+  ├─ Agent-Model ──────→ Report-Model
+  ├─ Agent-Security ───→ Report-Security
+  ├─ Agent-Domain ─────→ Report-Domain
+  └─ Agent-Boundary ───→ Report-Boundary
+
+Wait for ALL to complete.
+
+Then: Comparative Summary
+```
+
+---
+
+## Phase 3: Comparative Summary
+
+### 3.1 Merge Results
+
+Collect all 7 agent reports. Normalize into common format:
+
+```yaml
+finding:
+  id: {agent_id}-{check_id}
+  agent: {structure|human|vibe|model|security|domain|boundary}
+  category: {structure|persona|domain|security|boundary}
+  severity: {critical|high|medium|low}
+  status: {pass|fail}
+  file: {path}
+  line: {N}
+  evidence: {quote}
+  impact: {what could go wrong}
+  fix: {specific recommendation}
+  agent_reasoning: {why this agent caught it}
+```
+
+### 3.2 Cross-Agent Analysis
+
+**Compare findings across agents to find patterns:**
+
+| Analysis Type | Method | Example |
+|---------------|--------|---------|
+| **Overlap** | Same issue found by multiple agents | Security + Vibe both flag SQL injection |
+| **Blind Spot** | High-risk area, no agent flagged | No agent checked auth on DELETE endpoint |
+| **Conflict** | Agents disagree | Structure says "good examples", Human says "confusing" |
+| **Cascade** | One issue causes multiple findings | Missing validation → SQL injection + XSS + Path traversal |
+
+### 3.3 Comparative Report Template
+
+```markdown
+# 🛡️ Hedge Comparative Report: {name}
+
+## Executive Summary
+| Metric | Value |
+|--------|-------|
+| **Combined Score** | {combined}/100 ({rating}) |
+| **Target** | {name} ({type}, {lines}L) |
+| **Agents Deployed** | {N}/7 |
+| **Total Checks** | {N} |
+| **Findings** | {c}🔴 {h}🟠 {m}🟡 {l}🟢 |
+| **Duration** | {time} |
+
+## Agent Performance (Side-by-Side)
+
+| Agent | Score | 🔴 | 🟠 | 🟡 | 🟢 | Status |
+|-------|-------|----|----|----|----|--------|
+| 🔧 Structure | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 👤 Human | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🎨 Vibe | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🤖 Model | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🛡️ Security | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 🌐 Domain | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+| 📏 Boundary | {n}% | {c} | {h} | {m} | {l} | {emoji} |
+
+## Cross-Agent Analysis
+
+### 🔴 Critical Overlaps (Confirmed by multiple agents)
+| Issue | Agents | Severity | Consensus |
+|-------|--------|----------|-----------|
+| {issue} | {agent1} + {agent2} | 🔴 | Strong |
+
+### 🟠 Blind Spots (High-risk, unflagged)
+| Area | Risk | Why Missed | Recommendation |
+|------|------|------------|----------------|
+| {area} | 🔴 | No agent checked X | Add check to {agent} |
+
+### 🟡 Conflicts (Agents disagree)
+| Area | Agent A says | Agent B says | Resolution |
+|------|-------------|-------------|------------|
+| {area} | "Good" | "Confusing" | Weight toward user impact |
+
+## Detailed Findings by Severity
+
+### 🔴 Critical
+| ID | Agent | Issue | File | Fix |
+|----|-------|-------|------|-----|
+| ... | ... | ... | ... | ... |
+
+### 🟠 High
+| ID | Agent | Issue | File | Fix |
+|----|-------|-------|------|-----|
+| ... | ... | ... | ... | ... |
+
+### 🟡 Medium
+| ID | Agent | Issue | File | Fix |
+|----|-------|-------|------|-----|
+| ... | ... | ... | ... | ... |
+
+## Remediation Priority
+
+### 🔴 Must Fix (Critical)
+1. [ ] {issue} → {fix} (found by {agents})
+
+### 🟠 Should Fix (High)
+1. [ ] {issue} → {fix} (found by {agents})
+
+### 🟡 Nice to Have (Medium/Low)
+1. [ ] {issue} → {fix} (found by {agents})
+
+## Heat Map
+```
+Structure:  ████████░░ {n}%
+Human:      █████▌░░░░ {n}%
+Vibe:       ████░░░░░░ {n}%
+Model:      █████▎░░░░ {n}%
+Security:   ██████░░░░ {n}%
+Domain:     ██████░░░░ {n}%
+Boundary:   █████▌░░░░ {n}%
+```
+
+## Agent Notes
+
+### 🔧 Structure Agent
+{summary of structure findings}
+
+### 👤 Human Agent
+{summary of human findings}
+
+### 🎨 Vibe Agent
+{summary of vibe findings}
+
+### 🤖 Model Agent
+{summary of model findings}
+
+### 🛡️ Security Agent
+{summary of security findings}
+
+### 🌐 Domain Agent
+{summary of domain findings}
+
+### 📏 Boundary Agent
+{summary of boundary findings}
+
+---
+*Hedge v3.0 | Comparative Summary | {date}*
+```
+
+---
+
+## Phase 1-6: Test Checklists (Agent References)
+
+### Phase 1: Structure Hedge (A1-A13)
 
 | ID | Check | Fail Mode | Sev |
 |----|-------|-----------|-----|
@@ -90,13 +493,9 @@ Proceed? [Y/n/custom]
 | A12 | Exit/Cleanup instructions (if stateful) | State pollution | 🟠 |
 | A13 | Safety warnings (if destructive) | Accidental damage | 🔴 |
 
----
+### Phase 2: Persona-Based Adversarial Tests
 
-## Phase 2: Persona-Based Adversarial Tests
-
-### Persona 1: Impatient Human 👤
-
-> "I don't read docs. I skim. I assume. I get frustrated."
+#### Persona 1: Impatient Human 👤
 
 | ID | Test | Technique | What to Check |
 |----|------|-----------|--------------|
@@ -109,9 +508,7 @@ Proceed? [Y/n/custom]
 | H7 | Copy-paste error | Paste wrong content | Validates inputs? |
 | H8 | Escalation demand | "I need admin access" | Enforces authority boundaries? |
 
-### Persona 2: Vibe Coder 🎨
-
-> "I feel the code. I copy from SO. I never read errors. I ship and pray."
+#### Persona 2: Vibe Coder 🎨
 
 | ID | Test | Technique | What to Check |
 |----|------|-----------|--------------|
@@ -124,9 +521,7 @@ Proceed? [Y/n/custom]
 | V7 | YOLO execution | Run commands without reading | Dangerous ops marked? |
 | V8 | Vibe override | "I know better" | Explains WHY? |
 
-### Persona 3: Literal Model 🤖
-
-> "I follow instructions to the letter. I don't infer intent."
+#### Persona 3: Literal Model 🤖
 
 | ID | Test | Technique | What to Check |
 |----|------|-----------|--------------|
@@ -139,13 +534,9 @@ Proceed? [Y/n/custom]
 | M7 | Edge literalism | Apply to unintended case | Scope boundaries clear? |
 | M8 | Authority overreach | "Help" = modify anything | Permission boundaries explicit? |
 
----
+### Phase 3: Domain-Specific Hedge
 
-## Phase 3: Domain-Specific Hedge
-
-### Category F: Frontend Hedge (UI/Web Skills)
-
-For skills that generate/modify frontend code (React, Vue, CSS, HTML):
+#### Category F: Frontend Hedge (UI/Web Skills)
 
 | ID | Test | Failure Mode | Sev |
 |----|------|-------------|-----|
@@ -163,9 +554,7 @@ For skills that generate/modify frontend code (React, Vue, CSS, HTML):
 | F12 | Visual regression | No screenshot comparison | 🟡 UI drift unnoticed |
 | F13 | Copy-paste breakpoint blindness | Uses framework defaults without content analysis | 🟡 Wrong breakpoints |
 
-### Category B: Backend Hedge (API/DB/Server Skills)
-
-For skills that generate/modify backend code (APIs, DB, ORM, services):
+#### Category B: Backend Hedge (API/DB/Server Skills)
 
 | ID | Test | Failure Mode | Sev |
 |----|------|-------------|-----|
@@ -185,9 +574,7 @@ For skills that generate/modify backend code (APIs, DB, ORM, services):
 | B14 | Over-abstraction | Class hierarchies for one-liners | 🟡 Unnecessary complexity |
 | B15 | Hallucinated APIs | Calls non-existent API methods | 🔴 Compilation/runtime fail |
 
-### Category S: Full-Stack / E2E Hedge (Integration Skills)
-
-For skills orchestrating end-to-end flows or multi-layer changes:
+#### Category S: Full-Stack / E2E Hedge (Integration Skills)
 
 | ID | Test | Failure Mode | Sev |
 |----|------|-------------|-----|
@@ -205,11 +592,9 @@ For skills orchestrating end-to-end flows or multi-layer changes:
 | S12 | Malicious compliance | Literal interpretation → absurd result | 🟠 Nonsensical output |
 | S13 | Brittle dependency chain | Manual handoff breaks | 🟠 Workflow failure |
 
----
+### Phase 4: Boundary & Consistency Hedge
 
-## Phase 4: Boundary & Consistency Hedge
-
-### Boundary Tests (Effort-Scoped)
+#### Boundary Tests
 
 | ID | Test | Scope |
 |----|------|-------|
@@ -222,7 +607,7 @@ For skills orchestrating end-to-end flows or multi-layer changes:
 | C7 | Cancellation mid-flight | Complex+ |
 | C8 | Resource exhaustion | Complex+ |
 
-### Consistency Tests
+#### Consistency Tests
 
 | ID | Test | Method |
 |----|------|--------|
@@ -231,17 +616,9 @@ For skills orchestrating end-to-end flows or multi-layer changes:
 | E3 | Commutativity | Order of independent ops |
 | E4 | Monotonicity | More info → better result |
 
----
+### Phase 6: Security Attack Detection (Sec)
 
-## Phase 6: Security Attack Detection (Sec)
-
-> **Target**: Not just skills — also vibe-coded projects, prototypes, MVPs, and AI-generated code.
->
-> **Philosophy**: Vibe coders ship fast. Security is invisible until it breaks. We find what they can't see.
-
-For skills that generate or modify code, AND for any codebase scanned via `--security`:
-
-### Category Sec: Injection & Security Hedge
+#### Category Sec: Injection & Security Hedge
 
 | ID | Check | Failure Mode | Sev | Why Vibe Coders Hit This |
 |----|-------|-------------|-----|-------------------------|
@@ -258,7 +635,7 @@ For skills that generate or modify code, AND for any codebase scanned via `--sec
 | Sec11 | Overly Permissive CORS | `Access-Control-Allow-Origin: *` on authenticated APIs | 🟠 CSRF bypass | AI suggests `cors()` to "fix CORS errors". Vibe coder applies globally |
 | Sec12 | Missing Input Validation | User input flows directly to DB/files/commands without validation | 🟠 Multi-category risk | AI chains `req.body` straight to DB. No validation layer exists |
 
-### Vibe-Coding Specific Security Anti-Patterns
+#### Vibe-Coding Specific Security Anti-Patterns
 
 | ID | Pattern | Why It Happens | Detection |
 |----|---------|---------------|-----------|
@@ -269,51 +646,21 @@ For skills that generate or modify code, AND for any codebase scanned via `--sec
 | Vibe5 | Stack Trace in API Response | AI returns `err.stack` for "better debugging" | Look for error responses containing `stack`, `trace`, file paths |
 | Vibe6 | `| safe` / Triple Mustache Disable | AI output doesn't render, vibe coder disables escaping | Look for `{{{ }}}`, `\|safe`, `dangerouslySetInnerHTML` |
 
-### Security Scanner Integration
+#### Security Scanner Integration
 
 Use the bundled `hedge-sec-scan.py` for automated detection:
 
 ```bash
-# Scan a project directory
 python hedge-sec-scan.py ./my-project --format=md
-
-# Only critical + high severity
 python hedge-sec-scan.py ./my-project --severity=high
-
-# JSON output for CI integration
 python hedge-sec-scan.py ./my-project --format=json
-
-# Filter languages
 python hedge-sec-scan.py ./my-project --lang=js,py,ts
 ```
-
-**When to run security scan:**
-- After `--deep` hedge, if target skill generates code
-- When user asks to "check security" or "find vulnerabilities"
-- When target is a vibe-coded project (not just a skill)
-- When scoring includes backend or fullstack domain
-
-### Security Scoring Extension
-
-```
-Applicable_Security = All Sec checks relevant to target's domain
-Security_Risk_Points = Σ(Critical×10 + High×5 + Medium×2 + Low×1)
-Security_Max = Applicable_Security × 10
-Security_Score = 100 - (Security_Risk_Points / Security_Max × 100)
-
-Combined_Score = (Hedge_Score × 0.7) + (Security_Score × 0.3)
-```
-
-If `Combined_Score < 60` and `Security_Score < 50`, downgrade overall rating by one level.
-
----
-
-## Phase 5: Hedge Report
 
 ### Scoring
 
 ```
-Applicable = All checks in selected (personas + domains + boundary + consistency)
+Applicable = All checks in selected agents
 Risk Points = Σ(Critical×10 + High×5 + Medium×2 + Low×1)
 Max = Applicable × 10
 Score = 100 - (Risk Points / Max × 100)
@@ -327,79 +674,6 @@ Score = 100 - (Risk Points / Max × 100)
 | 40-59 | 🟠 Risky | Major rewrite |
 | 0-39 | 🔴 Dangerous | Do not use |
 
-### Report Template
-
-```markdown
-# 🛡️ Hedge Report: {name}
-
-## Summary
-| Metric | Value |
-|--------|-------|
-| **Hedge Score** | {score}/100 ({rating}) |
-| **Security Score** | {sec_score}/100 ({sec_rating}) |
-| **Combined Score** | {combined}/100 |
-| **Target** | {name} ({type}, {lines}L) |
-| **Scope** | {personas} personas + {domains} domains + security + {checks} checks |
-| **Issues** | {c}🔴 {h}🟠 {m}🟡 {l}🟢 |
-
-## Structure (A)
-| ID | Check | Status | Notes |
-|----|-------|--------|-------|
-| ... | ... | ✅/❌ | ... |
-
-## Personas
-### 👤 Human (score: {n}%)
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| ... | ... | ... | ... | ... |
-
-### 🎨 Vibe (score: {n}%)
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| ... | ... | ... | ... | ... |
-
-### 🤖 Model (score: {n}%)
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| ... | ... | ... | ... | ... |
-
-## Domain Specific
-### {Frontend|Backend|Fullstack} ({domain})
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| ... | ... | ... | ... | ... |
-
-## Security Attack Detection (Sec)
-| ID | Check | Status | Risk | Notes |
-|----|-------|--------|------|-------|
-| ... | ... | ... | ... | ... |
-
-## Boundary & Consistency
-| ID | Test | Status | Risk | Notes |
-|----|------|--------|------|-------|
-| ... | ... | ... | ... | ... |
-
-## Remediation
-### 🔴 Must Fix
-1. [ ] {issue} → {fix}
-### 🟠 Should Fix
-1. [ ] {issue} → {fix}
-### 🟡 Nice to Have
-...
-
-## Heat Map
-```
-Structure: ████████░░ 80%
-Human:     █████▌░░░░ {n}%
-Vibe:      ████░░░░░░ {n}%
-Model:     █████▎░░░░ {n}%
-{Domain}:  ██████░░░░ {n}%
-Security:  █████░░░░░ {n}%
-```
----
-*Hedge v2.2 | {date}*
-```
-
 ---
 
 ## Safety Rules
@@ -407,25 +681,27 @@ Security:  █████░░░░░ {n}%
 1. NEVER execute destructive commands during live tests
 2. NEVER send real data to external services during adversarial tests
 3. ALWAYS use isolated worktree for execution tests
-4. ALWAYS get user confirmation before Phase 1 (Confirm gate)
+4. ALWAYS get user confirmation before Phase 2 (Confirm gate)
 5. Destructive targets (>high risk) require `--i-understand-risk` flag for live tests
 6. Respect skill ownership — only test skills you created or have permission to test
+7. Parallel agents must not interfere with each other — each gets read-only or isolated context
 
 ## Invocation
 
 ```bash
 /hedge                          # Auto-detect targets
-/hedge my-skill                 # Target specific
-/hedge my-skill --quick         # Structure only
-/hedge my-skill --deep          # Full everything
-/hedge my-skill --persona human # Specific persona
-/hedge my-skill --domain backend # Domain-specific
-/hedge my-skill --security      # Include security attack detection
-/hedge ./my-project --security  # Scan a codebase (not just a skill)
-/hedge my-skill --deep --security # Full hedge + security scan
-/hedge my-skill --dry-run       # Plan only
+/hedge my-skill                 # Target specific skill
+/hedge ./my-project             # Target codebase
+/hedge my-skill --quick         # Structure only (1 agent)
+/hedge my-skill --deep          # Full parallel execution (7 agents)
+/hedge my-skill --security      # Security agent only
+/hedge ./src --security         # Scan codebase security
+/hedge my-skill --persona human # Human + Vibe + Model agents
+/hedge my-skill --domain backend # Domain + Security agents
+/hedge my-skill --parallel      # Force parallel execution
+/hedge my-skill --dry-run       # Plan only, no execution
 ```
 
 ---
 
-**Begin: Identify target → Profile → Present plan → AWAIT CONFIRMATION → Execute.**
+**Begin: Intent Recognition → Plan Design → AWAIT CONFIRMATION → Parallel Execution → Comparative Summary.**
