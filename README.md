@@ -328,3 +328,23 @@ MIT License
 ---
 
 *Hedge v3.0 — Parallel Adversarial Testing Framework*
+
+---
+
+## 版本更新
+
+### Hedge v3.1 — Evidence-Calibrated Adversarial Review
+
+更新日期：2026-06-01
+
+本次更新修正了 v3.0 容易出现的“假阳性”和“严重性膨胀”问题。Hedge 仍然保持并行对抗审计能力，但最终报告必须先经过证据校准。
+
+关键变化：
+
+- 新增 `A15 Fact Verification Gate`：文件缺失、frontmatter 缺失、命令不存在、package 内容异常等结论必须二次验证。
+- 新增 `Freshness Check`：报告前检查当前工作区状态、近期变更和项目验收结果，避免基于过期状态下结论。
+- 新增 `Severity Review`：当自动验收通过但 Hedge 分数偏低时，必须解释冲突，不能直接给出 `Risky` 或 `Major rewrite` 结论。
+- 新增 `R1-R4 Remediation Cost`：High/Critical 修复建议必须标注 breaking change、迁移成本、用户成本和优先兼容修复方案。
+- 调整评分语义：分数仅作为 heuristic，不能替代证据和严重性复核。
+
+版本定位：`v3.1` 不是更激进的审计器，而是更可信的审计器。它把“线索池”和“已证实缺陷”分开，避免把维护性观察误判为运行级阻断。
