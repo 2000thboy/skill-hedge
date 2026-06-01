@@ -1,6 +1,13 @@
 ---
 name: hedge
-description: USE WHEN testing/validating a skill or scanning codebase for security vulnerabilities. Auto-detects target, designs parallel adversarial plan with 7 sub-agents, executes, produces comparative summary. Runs hedge-sec-scan.py for SQL injection, XSS, path traversal, secrets, SSRF detection. Triggers: "test skill", "validate skill", "hedge test", "scan security", "check vulnerabilities", "security audit", "对冲测试", "埋雷测试", "安全扫描", "adversarial test".
+description: >
+  USE WHEN testing/validating a skill or scanning codebase for security
+  vulnerabilities. Auto-detects target, designs parallel adversarial plan with
+  7 sub-agents, executes, produces comparative summary. Runs hedge-sec-scan.py
+  for SQL injection, XSS, path traversal, secrets, SSRF detection. Triggers:
+  "test skill", "validate skill", "hedge test", "scan security",
+  "check vulnerabilities", "security audit", "对冲测试", "埋雷测试", "安全扫描",
+  "adversarial test".
 argument-hint: "[path-or-name] [--quick|--deep|--security|--parallel|--persona human|vibe|model|all|--domain backend|frontend|fullstack|--lang=js,py,ts|--format=json|md|--severity=low|medium|high|critical|--dry-run]"
 level: 3
 ---
@@ -98,6 +105,46 @@ profile:
 - Map data flow (user input → processing → output)
 - Flag high-risk areas (auth, file upload, DB queries, external calls)
 
+### 0.35 Skill Identity Consistency Check (Vibe Police)
+
+**Only run when Target Type == Skill.** If Target Type != Skill, skip this check entirely and proceed to 0.4.
+
+Perform naming consistency validation across four sources. Normalize each name by stripping `skill-` prefix and converting to lowercase kebab-case before comparing.
+
+| Source | How to Extract | Example |
+|--------|---------------|---------|
+| **Repo name** | `git remote get-url origin` → last path segment → strip `.git` | `https://github.com/2000thboy/hedge.git` → `hedge` |
+| **Folder name** | Directory name containing `SKILL.md` | `skill-hedge` → `hedge` |
+| **README title** | First `# ` heading in `README.md` | `# Hedge` → `hedge` |
+| **SKILL.md name** | `name:` field in YAML frontmatter | `name: hedge` → `hedge` |
+
+```
+Example — "skill-hedge":
+  Repo:     2000thboy/hedge.git       → "hedge"   ✅
+  Folder:   ~/.claude/skills/hedge    → "hedge"   ✅
+  README:   # Hedge                   → "hedge"   ✅
+  SKILL.md: name: hedge               → "hedge"   ✅
+  Result: UNIFIED ✅
+
+Example — "skill-awesome-tool":
+  Repo:     myuser/awesome-tool.git   → "awesome-tool" ✅
+  Folder:   skill-awesome-tool        → "awesome-tool" ✅
+  README:   # Super Awesome Tool      → "super-awesome-tool" ❌
+  SKILL.md: name: awesome-tool        → "awesome-tool" ✅
+  Result: MISMATCH ❌ — README title differs ("super-awesome-tool" vs "awesome-tool")
+```
+
+**If mismatch detected:**
+- Flag severity: 🟠 High
+- Report exactly which sources differ, with normalized values
+- Suggest canonical name (usually the SKILL.md `name:` value)
+- Surface in Comparative Summary under its own "Identity Drift" subsection
+
+**Why this matters (Vibe Police rationale):**
+- Inconsistent naming causes user confusion — "Do I call `/hedge` or `/skill-hedge` or `/super-awesome-tool`?"
+- Folder name with `skill-` prefix but SKILL.md `name` without prefix is a common vibe-coding smell
+- README title drifting from actual skill name creates documentation/implementation gap
+
 ### 0.4 Present Plan (Confirm Gate)
 
 ```
@@ -125,7 +172,7 @@ plan:
   agents:
     - id: structure
       enabled: {bool}
-      scope: A1-A13
+      scope: A1-A15
       reason: "Always enabled for skill targets"
     - id: human
       enabled: {bool}
@@ -185,7 +232,7 @@ Present the designed plan as:
 ## Parallel Agents
 | # | Agent | Scope | Enabled | Why |
 |---|-------|-------|---------|-----|
-| 1 | 🔧 Structure | A1-A13 | ✅ | {reason} |
+| 1 | 🔧 Structure | A1-A15 | ✅ | {reason} |
 | 2 | 👤 Human | H1-H8 | ✅ | {reason} |
 | 3 | 🎨 Vibe | V1-V8 | ✅ | {reason} |
 | 4 | 🤖 Model | M1-M8 | ✅ | {reason} |
@@ -228,7 +275,7 @@ You are the Structure Hedge agent. Test target skill's structural integrity.
 Target: {file_path}
 
 Check these items and return a structured report:
-{A1-A13 checklist}
+{A1-A15 checklist}
 
 For each check, return:
 - ID, Name, Status (✅/❌), Severity, Evidence (quote from file), Recommendation
@@ -350,6 +397,68 @@ finding:
   agent_reasoning: {why this agent caught it}
 ```
 
+### 3.1.1 Evidence Calibration
+
+Before assigning severity or producing a fix list:
+
+- Verify each factual claim against the current target files, package output, or command output.
+- Mark stale, inferred, or unverified claims as `provisional`; do not list them as confirmed findings.
+- Every Critical or High finding must include a current file path plus line number, command output, or package artifact evidence.
+- Cross-agent agreement is not evidence by itself. It only raises confidence when agents cite the same current source.
+- If a target has passing checks, explain why the finding still matters instead of ignoring the check result.
+- Separate "should investigate" from "must fix"; investigation items belong in Medium/Low unless current evidence shows direct breakage or unsafe execution.
+
+#### Fact Verification Gate
+
+Before reporting "missing file", "missing frontmatter", "command absent", "package excludes/includes X", or "tool unavailable":
+
+- Re-run a direct file existence check such as `Glob`, `Read`, `rg --files`, package dry-run output, or the project's own manifest command.
+- Re-read the exact file and nearby lines that support the claim.
+- Check `git status --short` and recent file changes when the result could have changed during the session.
+- If the second check contradicts the first finding, move it to `Provisional / Needs Verification` and do not count it in severity totals.
+
+#### Freshness Check
+
+For current repository targets, collect lightweight freshness evidence before the final report:
+
+- `git status --short`
+- recent relevant commits or file modification times when available
+- package or validation output when the project has a known check command
+
+If the Hedge result conflicts with a passing project validation command, explain the conflict explicitly and run a severity review. A passing check does not erase design risk, but it prevents presenting a documentation or maintainability issue as an operational blocker without extra evidence.
+
+### 3.1.2 Severity Calibration
+
+Use this gate before calling something Critical:
+
+- Critical: current evidence shows data loss, credential exposure, arbitrary code execution, destructive command execution, broken install/load, or a production-blocking false-ready claim.
+- High: current evidence shows likely user harm, unsafe copy-paste commands, major workflow ambiguity, missing guardrails around state mutation, or behavior that can fail on normal projects.
+- Medium: maintainability, clarity, stale docs, weak automation, or risks that require unusual scale or a chain of assumptions.
+- Low: polish, naming preference, examples, style, or optional consistency improvements.
+
+Do not recommend renaming public commands, changing established user decisions, or large migrations as the default fix unless the current evidence shows the existing name or structure is actively causing failure. Prefer compatibility-preserving fixes first.
+
+If a score or heat map is included, state the scoring formula and weight source. If weights are heuristic, label the score as heuristic and do not use it as the primary verdict.
+
+When scoring is useful, separate risk classes:
+
+- operational risk: runtime breakage, install/load failure, data loss, security, state mutation
+- documentation quality: stale references, unclear wording, weak examples
+- architectural observation: maintainability, naming taste, decomposition, future scaling
+
+Use lower weight for maintainability-only issues than for security or correctness issues. If automated validation passes but the heuristic score is below 60, include a "severity review" note and avoid using the score as the headline verdict.
+
+### 3.1.3 Remediation Cost Calibration
+
+Every High or Critical fix recommendation must include adoption cost:
+
+- R1 `breaking_change`: whether it changes public commands, paths, file formats, or user workflows
+- R2 `migration_cost`: low, medium, or high
+- R3 `user_effort`: docs-only, code change, workflow migration, or data migration
+- R4 `preferred_fix`: compatibility-preserving fix first, breaking migration only when justified
+
+Recommendations with medium or high migration cost must explain why the benefit is worth the cost. Do not suggest renaming established commands or merging intentionally separate storage areas unless the current evidence shows active failure.
+
 ### 3.2 Cross-Agent Analysis
 
 **Compare findings across agents to find patterns:**
@@ -359,6 +468,7 @@ finding:
 | **Overlap** | Same issue found by multiple agents | Security + Vibe both flag SQL injection |
 | **Blind Spot** | High-risk area, no agent flagged | No agent checked auth on DELETE endpoint |
 | **Conflict** | Agents disagree | Structure says "good examples", Human says "confusing" |
+| **Identity Drift** | Naming inconsistent across artifacts | SKILL.md `name: foo`, README `# Foo Bar`, folder `skill-foo` |
 | **Cascade** | One issue causes multiple findings | Missing validation → SQL injection + XSS + Path traversal |
 
 ### 3.3 Comparative Report Template
@@ -404,6 +514,21 @@ finding:
 | Area | Agent A says | Agent B says | Resolution |
 |------|-------------|-------------|------------|
 | {area} | "Good" | "Confusing" | Weight toward user impact |
+
+### 🟠 Identity Drift (Naming inconsistent across artifacts)
+| Artifact A | Value | Artifact B | Value | Canonical | Fix |
+|------------|-------|------------|-------|-----------|-----|
+| SKILL.md `name` | `foo` | README title | `# Foo Bar` | `foo` | Align README to `foo` |
+
+### 🟡 Provisional / Needs Verification
+| Claim | Why not confirmed | Required verification |
+|-------|-------------------|-----------------------|
+| {claim} | {stale/inferred/no current evidence} | {file/command/package check} |
+
+### 🟡 Severity Review
+| Conflict | Validation result | Final treatment |
+|----------|-------------------|-----------------|
+| {hedge finding vs project check} | {command passed/failed} | {why severity changed or stayed} |
 
 ## Detailed Findings by Severity
 
@@ -475,7 +600,7 @@ Boundary:   █████▌░░░░ {n}%
 
 ## Phase 1-6: Test Checklists (Agent References)
 
-### Phase 1: Structure Hedge (A1-A13)
+### Phase 1: Structure Hedge (A1-A15)
 
 | ID | Check | Fail Mode | Sev |
 |----|-------|-----------|-----|
@@ -492,6 +617,8 @@ Boundary:   █████▌░░░░ {n}%
 | A11 | Referenced files exist | Broken deps | 🟡 |
 | A12 | Exit/Cleanup instructions (if stateful) | State pollution | 🟠 |
 | A13 | Safety warnings (if destructive) | Accidental damage | 🔴 |
+| A14 | Name consistency: repo / folder / README / SKILL.md all unified | User confusion, brand dilution | 🟠 |
+| A15 | Fact verification: missing-file, missing-frontmatter, absent-command, and package-contents claims are rechecked | False positive from stale or wrong-path evidence | 🟠 |
 
 ### Phase 2: Persona-Based Adversarial Tests
 
@@ -660,19 +787,22 @@ python hedge-sec-scan.py ./my-project --lang=js,py,ts
 ### Scoring
 
 ```
-Applicable = All checks in selected agents
-Risk Points = Σ(Critical×10 + High×5 + Medium×2 + Low×1)
-Max = Applicable × 10
-Score = 100 - (Risk Points / Max × 100)
+Applicable = Confirmed findings only. Exclude provisional findings.
+Severity Points = Critical×10 + High×5 + Medium×2 + Low×1
+Category Weight = security 3.0, correctness 2.0, usability 1.5, operations 1.5, documentation 0.75, maintainability 0.5
+Risk Points = Σ(Severity Points × Category Weight)
+Score = heuristic only. Do not use as the primary verdict without Severity Review.
 ```
 
 | Score | Rating | Verdict |
 |-------|--------|---------|
-| 90-100 | 🟢 Production Ready | Ship |
-| 75-89 | 🟡 Good with Notes | Fix highs, then ship |
-| 60-74 | 🟠 Needs Work | Fix critical+high first |
-| 40-59 | 🟠 Risky | Major rewrite |
-| 0-39 | 🔴 Dangerous | Do not use |
+| 90-100 | 🟢 Low Hedge Risk | Ship if project validation also passes |
+| 75-89 | 🟡 Good with Notes | Fix confirmed highs or accept explicitly |
+| 60-74 | 🟠 Needs Work | Fix confirmed critical/high first |
+| 40-59 | 🟠 Risky | Run Severity Review before calling for major rewrite |
+| 0-39 | 🔴 Dangerous | Do not use unless confirmed operational/security failures are present |
+
+If project validation passes and the heuristic score is below 60, add a severity-review warning instead of presenting the score as a standalone verdict.
 
 ---
 
