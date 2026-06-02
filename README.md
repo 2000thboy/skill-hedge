@@ -13,7 +13,7 @@
 1. **Skill 层** —— 验证 Claude Code Skill 在面对真实用户误用、模糊意图和模型过度字面化时，是否依然安全、可靠、可用
 2. **软件层** —— 扫描前后端代码中的安全漏洞，特别是 AI 生成代码（vibe-coding）中常见的注入攻击、路径遍历、XSS、SSRF 等风险
 
-**v3.0 核心流程**：需求识别 → 计划设计 → **并行对冲** → 对比总结
+**v3.2 核心流程**：需求识别 → 计划设计 → **证据门控对冲** → 对比总结 → 严重性复核
 
 ```
 用户请求
@@ -34,11 +34,19 @@
                               ▼
                     ┌─────────────────┐
                     │   对比总结        │
-                    │  交叉分析 / 优先级  │
+                    │  证据校准 / 优先级  │
                     └─────────────────┘
 ```
 
 不同于传统的代码测试工具（如 `auto-verify`、`ultraqa` 验证代码正确性），Hedge 问的是：**"这段代码在真实攻击者手里会出事吗？"**
+
+Hedge 的结论不是生产认证。它会把发现分成三类：
+
+| 类型 | 含义 | 怎么处理 |
+|------|------|----------|
+| **Confirmed** | 当前文件行、命令输出、包内容或可复现实验支持 | 可进入 Critical/High 修复清单 |
+| **Inferred** | 从文档或代码推断合理，但未复现 | 降级为调查项，不能直接当阻断 |
+| **Needs Verification** | 可能重要，但证据不足或与验收结果冲突 | 先补验证，再定严重性 |
 
 ---
 
@@ -74,13 +82,13 @@ Target Skill ◄── Human (impatient, vague) ──►
 
 > ⚠️ **仓库地址确认**：请确保从正确的仓库克隆
 > ```
-> 正确: https://github.com/2000thboy/hedge.git
-> 目录: ~/.claude/skills/hedge
+> 正确: https://github.com/2000thboy/skill-hedge.git
+> 目录: ~/.claude/skills/skill-hedge
 > ```
 
 ```bash
 # 克隆到 Claude Code Skill 目录
-git clone https://github.com/2000thboy/hedge.git ~/.claude/skills/hedge
+git clone https://github.com/2000thboy/skill-hedge.git ~/.claude/skills/skill-hedge
 ```
 
 安装完成后，在 Claude Code 中即可通过 `/hedge` 调用。
@@ -116,10 +124,11 @@ git clone https://github.com/2000thboy/hedge.git ~/.claude/skills/hedge
 | 📏 Boundary | 边界情况和一致性测试 | `--deep` 或复杂目标 |
 
 **对比总结输出：**
-- 各代理评分并排对比
-- 交叉分析（重叠发现 / 盲点 / 冲突）
-- 按严重程度排序的修复建议
-- 可视化 Heat Map
+- 证据校准表：哪些是实锤，哪些只是推断
+- 严重性复核：自动验收通过但 Hedge 认为有风险时，解释冲突
+- 交叉分析：重叠发现 / 盲点 / 冲突 / 身份漂移
+- 按严重程度和修复成本排序的建议
+- 可选 Heat Map：只作为启发式视图，不作为发布结论
 
 ### 软件安全扫描（前后端代码）
 
@@ -210,28 +219,37 @@ Hedge 的测试分为六大类别：
 
 使用 `hedge-sec-scan.py` 工具自动扫描，支持 Python / JavaScript / TypeScript / Java / PHP / Go / Ruby 等语言。
 
-### 6. Hedge Report（评分报告）
+### 6. Hedge Report（证据校准报告）
 
-汇总所有测试结果，生成结构化报告。
+汇总所有测试结果，生成结构化报告。报告优先回答：
+
+1. 哪些问题已经被当前证据证明？
+2. 哪些只是 agent 的推断或旧状态误判？
+3. 如果项目自带验收通过，Hedge 的风险判断为什么仍然成立或应该降级？
+4. 修复建议是否会破坏现有命令、路径、工作流或用户习惯？
 
 ---
 
-## 评分标准
+## 分数语义
 
-| 分数 | 评级 | 结论 | 行动建议 |
-|------|------|------|----------|
-| **90-100** | 绿色 - Production Ready | 可上线 | 直接发布 |
-| **75-89** | 黄色 - Good with Notes | 良好，有注意事项 | 修复 High 级别问题后发布 |
-| **60-74** | 橙色 - Needs Work | 需要改进 | 优先修复 Critical + High |
-| **40-59** | 橙色 - Risky | 有风险 | 需要重大重写 |
-| **0-39** | 红色 - Dangerous | 危险 | 禁止使用 |
+Hedge 可以给出分数和 Heat Map，但它们只是 **heuristic**，不能替代证据和严重性复核。
 
-**计算公式**：
+推荐解释方式：
+
+| 分数 | 含义 | 不能代表什么 |
+|------|------|--------------|
+| **90-100** | 启发式风险很低 | 不能单独代表 Production Ready |
+| **75-89** | 有少量确认问题或注意事项 | 不能跳过项目自身验收 |
+| **60-74** | 需要修复确认的 Critical/High | 不能说明所有问题都已复现 |
+| **40-59** | 风险线索较多，需要严重性复核 | 不能直接等于“必须重写” |
+| **0-39** | 只有在确认存在运行/安全级问题时才可称危险 | 不能基于主观打分禁止使用 |
+
+如果使用分数，必须写明：
 
 ```
-Risk Points = Σ(Critical×10 + High×5 + Medium×2 + Low×1)
-Max = Applicable Checks × 10
-Score = 100 - (Risk Points / Max × 100)
+Applicable = confirmed findings only
+Exclude = inferred / stale_or_conflicted / needs_verification
+Score = heuristic only
 ```
 
 ---
@@ -246,15 +264,25 @@ Score = 100 - (Risk Points / Max × 100)
 ## Executive Summary
 | Metric | Value |
 |--------|-------|
-| **Combined Score** | 87/100 (Good with Notes) |
+| **Verdict** | Evidence-based: usable with 2 confirmed High fixes |
 | **Target** | my-awesome-skill (workflow, 180L) |
 | **Agents Deployed** | 7/7 |
-| **Total Checks** | 85 |
-| **Findings** | 0 Critical  2 High  5 Medium  3 Low |
+| **Planned Probes** | 85 heuristic probes |
+| **Confirmed Findings** | 0 Critical  2 High  5 Medium  3 Low |
+| **Provisional Claims** | 4 moved out of severity totals |
+
+## Evidence Calibration
+
+| Claim | Evidence Status | Source | Final Treatment |
+|-------|-----------------|--------|-----------------|
+| Missing guardrails | confirmed | SKILL.md:42 | High |
+| Package excludes tests | needs_verification | no package dry-run yet | Provisional |
 
 ## Agent Performance (Side-by-Side)
 
-| Agent | Score | 🔴 | 🟠 | 🟡 | 🟢 | Status |
+Scores below are heuristic only.
+
+| Agent | Heuristic Score | 🔴 | 🟠 | 🟡 | 🟢 | Status |
 |-------|-------|----|----|----|----|--------|
 | 🔧 Structure | 80% | 0 | 1 | 2 | 10 | ⚠️ |
 | 👤 Human | 92% | 0 | 0 | 1 | 12 | ✅ |
@@ -279,6 +307,10 @@ Score = 100 - (Risk Points / Max × 100)
 ## Remediation Priority
 ### Must Fix
 - [ ] A6: Add "When NOT to Use" section (found by Structure + Vibe)
+  - R1 breaking_change: no
+  - R2 migration_cost: low
+  - R3 user_effort: docs-only
+  - R4 preferred_fix: compatibility-preserving wording update
 
 ### Should Fix
 - [ ] V3: Add "verify before using" warning (found by Vibe)
@@ -296,7 +328,7 @@ Boundary:   █████████▌ 95%
 ```
 
 ---
-*Hedge v2.1 | 2025-05-31*
+*Hedge v3.2 | Evidence-Calibrated Comparative Summary | 2026-06-02*
 ```
 
 ---
@@ -327,7 +359,7 @@ MIT License
 
 ---
 
-*Hedge v3.0 — Parallel Adversarial Testing Framework*
+*Hedge v3.2 — Evidence-Calibrated Adversarial Review*
 
 ---
 
@@ -348,3 +380,16 @@ MIT License
 - 调整评分语义：分数仅作为 heuristic，不能替代证据和严重性复核。
 
 版本定位：`v3.1` 不是更激进的审计器，而是更可信的审计器。它把“线索池”和“已证实缺陷”分开，避免把维护性观察误判为运行级阻断。
+
+### Hedge v3.2 — Score De-emphasis and Report Repair
+
+更新日期：2026-06-02
+
+本次更新修正了 v3.0/v3.1 仍然残留的报告漂移问题：README 和报告模板曾把 `Combined Score` 放在摘要第一行，容易让模型把启发式分数当作发布结论。
+
+关键变化：
+
+- 报告摘要改为先给 `Verdict`、确认问题、临时线索和验收冲突，再给可选分数。
+- Agent 输出必须带 `Evidence Status`，没有当前证据的发现不能进入 Critical/High。
+- README 删除“90-100 直接发布”的表达，改为“分数不能替代项目验收”。
+- 修复建议必须考虑破坏性、迁移成本、用户成本和兼容优先方案。

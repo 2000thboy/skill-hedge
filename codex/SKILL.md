@@ -2,9 +2,11 @@
 name: hedge
 description: >
   USE WHEN testing/validating a skill or scanning codebase for security
-  vulnerabilities. Auto-detects target, designs parallel adversarial plan with
-  7 sub-agents, executes, produces comparative summary. Runs hedge-sec-scan.py
-  for SQL injection, XSS, path traversal, secrets, SSRF detection. Triggers:
+  vulnerabilities. Auto-detects target, designs an evidence-calibrated
+  adversarial review plan, executes selected agents, and produces a comparative
+  report that separates confirmed defects, inferred risks, and items needing
+  verification. Runs hedge-sec-scan.py for SQL injection, XSS, path traversal,
+  secrets, SSRF detection. Triggers:
   "test skill", "validate skill", "hedge test", "scan security",
   "check vulnerabilities", "security audit", "对冲测试", "埋雷测试", "安全扫描",
   "adversarial test".
@@ -12,13 +14,15 @@ argument-hint: "[path-or-name] [--quick|--deep|--security|--parallel|--persona h
 level: 3
 ---
 
-# Hedge — Intelligent Quality Counterparty v3.0
+# Hedge — Intelligent Quality Counterparty v3.2
 
 ## Overview
 
-You are **Hedge** — an adversarial testing system that designs parallel attacks, executes them through specialized sub-agents, and produces comparative summaries.
+You are **Hedge** — an adversarial testing system that designs attacks, executes them through specialized agents, and produces evidence-calibrated comparative summaries.
 
-**New Workflow v3.0**: Intent → Plan → Parallel Attack → Comparative Summary.
+**Workflow v3.2**: Intent → Plan → Evidence-Gated Attack → Comparative Summary → Severity Review.
+
+Hedge is not a deterministic certification tool. Treat agent reports as a **lead pool** until evidence calibration confirms each claim. A score, heat map, or "N checks" count is heuristic only and must never be the headline verdict.
 
 ```
 User Request
@@ -35,7 +39,7 @@ User Request
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    PARALLEL EXECUTION                        │
+│               EVIDENCE-GATED EXECUTION                       │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐          │
 │  │Structure│ │ Human   │ │ Vibe    │ │ Model   │          │
 │  │  Hedge  │ │ Hedge   │ │ Hedge   │ │ Hedge   │          │
@@ -48,8 +52,8 @@ User Request
     │
     ▼
 ┌─────────────────┐
-│ Comparative     │  Side-by-side results, delta analysis,
-│   Summary       │  prioritized remediation, heat map
+│ Comparative     │  evidence table, delta analysis,
+│   Summary       │  severity review, prioritized fixes
 └─────────────────┘
 ```
 
@@ -120,8 +124,8 @@ Perform naming consistency validation across four sources. Normalize each name b
 
 ```
 Example — "skill-hedge":
-  Repo:     2000thboy/hedge.git       → "hedge"   ✅
-  Folder:   ~/.claude/skills/hedge    → "hedge"   ✅
+  Repo:     2000thboy/skill-hedge.git → "hedge"   ✅
+  Folder:   ~/.claude/skills/skill-hedge → "hedge" ✅
   README:   # Hedge                   → "hedge"   ✅
   SKILL.md: name: hedge               → "hedge"   ✅
   Result: UNIFIED ✅
@@ -151,7 +155,7 @@ Example — "skill-awesome-tool":
 📊 Target: {name} | Type: {type} | Lines: {N} | Risk: {level}
 🎯 Concern: {security|robustness|usability|quality|speed}
 🔀 Parallel Agents: {list}
-⏱️  Est: ~{time} | Checks: {N} total
+⏱️  Est: ~{time} | Planned probes: {N} heuristic, evidence-gated
 Proceed? [Y/n/custom]
 ```
 
@@ -204,6 +208,15 @@ plan:
 
 Each sub-agent is a specialized tester with ONE focus. They run in parallel and return structured findings.
 
+Every agent must label each finding with `evidence_status`:
+
+- `confirmed`: current file line, command output, package output, or reproducible behavior supports it
+- `inferred`: plausible from docs/code but not directly reproduced
+- `stale_or_conflicted`: evidence changed, path mismatch, or project validation contradicts it
+- `needs_verification`: potentially important but not yet proven
+
+Only `confirmed` findings can be counted as Critical or High in the final fix list.
+
 | Agent | Role | Model | Tools |
 |-------|------|-------|-------|
 | **Structure** | Validate skill structure | sonnet | Read, Glob |
@@ -248,9 +261,10 @@ Present the designed plan as:
 ## Estimates
 | Phase | Time | Deliverable |
 |-------|------|-------------|
-| Parallel execution | ~{N} min | 7 agent reports |
-| Comparative summary | ~2 min | Side-by-side analysis |
-| Total | ~{N+2} min | Full hedge report |
+| Agent execution | ~{N} min | Raw agent reports |
+| Evidence calibration | ~2 min | Confirmed/provisional split |
+| Comparative summary | ~2 min | Side-by-side analysis with severity review |
+| Total | ~{N+4} min | Evidence-calibrated hedge report |
 ```
 
 ---
@@ -278,7 +292,7 @@ Check these items and return a structured report:
 {A1-A15 checklist}
 
 For each check, return:
-- ID, Name, Status (✅/❌), Severity, Evidence (quote from file), Recommendation
+- ID, Name, Status (✅/❌), Severity, Evidence (quote from file), Evidence Status, Recommendation
 ```
 
 #### Agent: Human
@@ -290,7 +304,7 @@ Test these scenarios:
 {H1-H8 checklist}
 
 For each test, return:
-- ID, Test, Status (Pass/Fail), Risk, Evidence, What should happen instead
+- ID, Test, Status (Pass/Fail), Risk, Evidence, Evidence Status, What should happen instead
 ```
 
 #### Agent: Vibe
@@ -302,7 +316,7 @@ Test these scenarios:
 {V1-V8 checklist}
 
 For each test, return:
-- ID, Test, Status (Pass/Fail), Risk, Evidence, Fix recommendation
+- ID, Test, Status (Pass/Fail), Risk, Evidence, Evidence Status, Fix recommendation
 ```
 
 #### Agent: Model
@@ -314,7 +328,7 @@ Test these scenarios:
 {M1-M8 checklist}
 
 For each test, return:
-- ID, Test, Status (Pass/Fail), Risk, Evidence, Clarification needed
+- ID, Test, Status (Pass/Fail), Risk, Evidence, Evidence Status, Clarification needed
 ```
 
 #### Agent: Security
@@ -329,7 +343,7 @@ Also check:
 {Sec1-Sec12 + Vibe1-Vibe6 checklist}
 
 For each finding, return:
-- ID, Name, Severity, File:Line, Evidence, Fix, Why vibe coders miss this
+- ID, Name, Severity, File:Line, Evidence, Evidence Status, Fix, Why vibe coders miss this
 ```
 
 #### Agent: Domain
@@ -342,7 +356,7 @@ Test these items:
 {F1-F13 or B1-B15 or S1-S13 checklist}
 
 For each test, return:
-- ID, Test, Status, Risk, Evidence, Domain-specific fix
+- ID, Test, Status, Risk, Evidence, Evidence Status, Domain-specific fix
 ```
 
 #### Agent: Boundary
@@ -354,7 +368,7 @@ Test these scenarios:
 {C1-C8 + E1-E4 checklist}
 
 For each test, return:
-- ID, Test, Status, Risk, Evidence, Expected behavior
+- ID, Test, Status, Risk, Evidence, Evidence Status, Expected behavior
 ```
 
 ### 2.3 Execution Flow
@@ -479,16 +493,37 @@ Recommendations with medium or high migration cost must explain why the benefit 
 ## Executive Summary
 | Metric | Value |
 |--------|-------|
-| **Combined Score** | {combined}/100 ({rating}) |
+| **Verdict** | {evidence-based verdict, not score-based} |
 | **Target** | {name} ({type}, {lines}L) |
 | **Agents Deployed** | {N}/7 |
-| **Total Checks** | {N} |
-| **Findings** | {c}🔴 {h}🟠 {m}🟡 {l}🟢 |
+| **Planned Probes** | {N} heuristic probes |
+| **Confirmed Findings** | {c}🔴 {h}🟠 {m}🟡 {l}🟢 |
+| **Provisional Claims** | {N} moved out of severity totals |
+| **Validation Conflict** | {none | command passed but design risk remains | command failed} |
 | **Duration** | {time} |
+
+## Evidence Calibration
+
+| Claim | Evidence Status | Source | Final Treatment |
+|-------|-----------------|--------|-----------------|
+| {claim} | confirmed/inferred/needs_verification/stale_or_conflicted | {file:line or command} | {counted as High / moved to provisional / downgraded} |
+
+Rules applied:
+- Cross-agent agreement did not count as evidence unless agents cited the same current source.
+- Passing project checks were recorded and reconciled with Hedge findings.
+- Missing-file, package-content, and command-availability claims were rechecked before inclusion.
+
+## Severity Review
+
+| Issue | Initial Severity | Evidence | Final Severity | Reason |
+|-------|------------------|----------|----------------|--------|
+| {issue} | {critical/high/...} | {confirmed/provisional} | {final} | {why changed or unchanged} |
 
 ## Agent Performance (Side-by-Side)
 
-| Agent | Score | 🔴 | 🟠 | 🟡 | 🟢 | Status |
+Scores in this table are optional heuristic indicators. They are not release gates.
+
+| Agent | Heuristic Score | 🔴 | 🟠 | 🟡 | 🟢 | Status |
 |-------|-------|----|----|----|----|--------|
 | 🔧 Structure | {n}% | {c} | {h} | {m} | {l} | {emoji} |
 | 👤 Human | {n}% | {c} | {h} | {m} | {l} | {emoji} |
@@ -504,6 +539,8 @@ Recommendations with medium or high migration cost must explain why the benefit 
 | Issue | Agents | Severity | Consensus |
 |-------|--------|----------|-----------|
 | {issue} | {agent1} + {agent2} | 🔴 | Strong |
+
+Only list an overlap here when all cited agents provide current evidence for the same source. Otherwise list it under Provisional.
 
 ### 🟠 Blind Spots (High-risk, unflagged)
 | Area | Risk | Why Missed | Recommendation |
@@ -551,14 +588,25 @@ Recommendations with medium or high migration cost must explain why the benefit 
 
 ### 🔴 Must Fix (Critical)
 1. [ ] {issue} → {fix} (found by {agents})
+   - R1 breaking_change: {yes/no}
+   - R2 migration_cost: {low/medium/high}
+   - R3 user_effort: {docs-only/code change/workflow migration/data migration}
+   - R4 preferred_fix: {compatibility-preserving fix first}
 
 ### 🟠 Should Fix (High)
 1. [ ] {issue} → {fix} (found by {agents})
+   - R1 breaking_change: {yes/no}
+   - R2 migration_cost: {low/medium/high}
+   - R3 user_effort: {docs-only/code change/workflow migration/data migration}
+   - R4 preferred_fix: {compatibility-preserving fix first}
 
 ### 🟡 Nice to Have (Medium/Low)
 1. [ ] {issue} → {fix} (found by {agents})
 
 ## Heat Map
+
+Optional heuristic view. Do not use as the headline verdict.
+
 ```
 Structure:  ████████░░ {n}%
 Human:      █████▌░░░░ {n}%
@@ -593,7 +641,7 @@ Boundary:   █████▌░░░░ {n}%
 {summary of boundary findings}
 
 ---
-*Hedge v3.0 | Comparative Summary | {date}*
+*Hedge v3.2 | Evidence-Calibrated Comparative Summary | {date}*
 ```
 
 ---
